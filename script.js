@@ -24,6 +24,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     body: formData
                 });
 
+                // NUEVA MEJORA: Validamos si la respuesta HTTP fue exitosa
+                if (!response.ok) {
+                    throw new Error(`Error en el servidor (Código ${response.status}): El archivo puede ser demasiado pesado o la conexión se interrumpió.`);
+                }
+
                 // Obtenemos el texto plano primero para evitar fallos si el servidor responde en blanco
                 const responseText = await response.text();
                 if (!responseText) {
