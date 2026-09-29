@@ -1,0 +1,919 @@
+/* ==========================================================
+   PORTAL INFORMATIVO ALFREDO MANEIRO
+   Estilos institucionales: limpieza, elegancia y orden
+   ================================================*/
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f0f4f8;
+    color: #334155;
+    line-height: 1.6;
+    scroll-behavior: smooth;
+}
+
+/* ==========================================================
+   HEADER INSTITUCIONAL
+   ========================================================== */
+.header-institucional {
+    background: linear-gradient(135deg, #0b1f4d 0%, #1e3a8a 100%);
+    color: #ffffff;
+    text-align: center;
+    padding: 30px 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.header-institucional .header-sub {
+    font-size: 11px;
+    font-weight: 300;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    opacity: 0.85;
+    margin-bottom: 10px;
+}
+
+.header-institucional h1 {
+    font-size: 26px;
+    font-style: italic;
+    font-weight: 300;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+/* ==========================================================
+   MENÚ DE NAVEGACIÓN POR PESTAÑAS
+   ========================================================== */
+.menu-navegacion {
+    background: #ffffff;
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    padding: 0 15px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    border-bottom: 2px solid #e2e8f0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.menu-navegacion a {
+    color: #475569;
+    text-decoration: none;
+    padding: 14px 24px;
+    font-size: 15px;
+    font-weight: 600;
+    border-bottom: 3px solid transparent;
+    transition: all 0.25s ease;
+    position: relative;
+}
+
+.menu-navegacion a:hover {
+    color: #1e3a8a;
+    background-color: #f8fafc;
+}
+
+.menu-navegacion .tab-inicio:hover {
+    color: #1e3a8a;
+    background-color: #f8fafc;
+}
+
+/* La pestaña activa (se asigna vía JS al hacer clic) */
+.menu-navegacion a.tab-activo {
+    color: #1e3a8a;
+    border-bottom-color: #2563eb;
+    background-color: #f8fafc;
+}
+
+/* ==========================================================
+   CARRUSEL DE FOTOS HISTÓRICAS
+   ========================================================== */
+.carrusel-container {
+    width: 100%;
+    background: #0d1b2a;
+    padding: 25px 0;
+    overflow: hidden;
+    position: relative;
+    margin-bottom: 30px;
+    border-top: 2px solid #1b263b;
+    border-bottom: 2px solid #1b263b;
+}
+
+.carrusel-track {
+    display: flex;
+    gap: 15px;
+    width: max-content;
+    animation: moverCarrusel 30s linear infinite;
+}
+
+.carrusel-track:hover {
+    animation-play-state: paused;
+}
+
+.foto-caja {
+    width: 180px;
+    height: 140px;
+    background: #1b263b;
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    flex-shrink: 0;
+    transition: transform 0.3s ease;
+}
+
+.foto-caja:hover {
+    transform: scale(1.05);
+}
+
+.foto-caja img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: center;
+    background: #0d1b2a;
+}
+
+@keyframes moverCarrusel {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+}
+
+/* ==========================================================
+   SECCIONES FIJAS (Vida, Obra, Fotos, Videos, Contacto)
+   ========================================================== */
+.seccion-fija {
+    display: none;
+    padding: 40px 20px;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.seccion-fija.active {
+    display: block;
+}
+
+.seccion-fija .seccion-header {
+    margin-bottom: 25px;
+    padding-bottom: 12px;
+    border-bottom: 3px solid #e2e8f0;
+}
+
+.seccion-fija .seccion-header h2 {
+    color: #1e3a8a;
+    font-size: 24px;
+    font-weight: 700;
+}
+
+.seccion-fija .contenido-seccion {
+    color: #334155;
+    line-height: 1.8;
+    font-size: 15px;
+    white-space: pre-line;
+}
+
+/* Galería de fotos */
+.galeria-fotos {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 15px;
+}
+
+.galeria-fotos .foto-item {
+    text-align: center;
+}
+
+.galeria-fotos .foto-item img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e2e8f0;
+}
+
+.galeria-fotos .foto-item small {
+    display: block;
+    margin-top: 6px;
+    color: #64748b;
+    font-size: 13px;
+}
+
+/* Galería de videos */
+.galeria-videos {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.galeria-videos .video-item {
+    background: #000;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+}
+
+.galeria-videos .video-item video {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    display: block;
+}
+
+.galeria-videos .video-item small {
+    display: block;
+    padding: 10px;
+    color: #ffffff;
+    background: #1e3a8a;
+    text-align: center;
+    font-size: 13px;
+}
+
+/* ==========================================================
+   CONTENIDO PRINCIPAL (Inicio / Muro de Publicaciones)
+   ========================================================== */
+.contenido-principal {
+    padding: 0 20px;
+    max-width: 900px;
+    margin: 0 auto;
+    display: none;
+}
+
+.contenido-principal.active {
+    display: block;
+}
+
+/* Barra de suscripción */
+.barra-suscripcion {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 20px;
+    padding: 0 10px;
+}
+
+.btn-suscribir {
+    background: #10b981;
+    color: white;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-suscribir:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+/* Tarjeta de publicaciones */
+.seccion-publicaciones {
+    background: #ffffff;
+    border-radius: 10px;
+    padding: 30px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.seccion-publicaciones h2 {
+    color: #1e3a8a;
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.seccion-publicaciones p.bienvenida {
+    color: #64748b;
+    font-size: 14px;
+    margin-bottom: 20px;
+}
+
+.seccion-publicaciones .divisor {
+    border: 0;
+    border-top: 1px solid #e2e8f0;
+    margin-bottom: 20px;
+}
+
+.mensaje-vacio {
+    color: #64748b;
+    text-align: center;
+    padding: 30px;
+    font-size: 14px;
+}
+
+/* Cards de publicación */
+.post-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.post-card .post-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.post-card .post-badge {
+    font-size: 10px;
+    font-weight: bold;
+    color: #0b1f4d;
+    background: #e0f2fe;
+    padding: 3px 10px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.post-card .post-date {
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+.post-card h3 {
+    font-size: 18px;
+    color: #0b1f4d;
+    margin-bottom: 12px;
+    font-weight: 700;
+}
+
+.post-card .post-texto {
+    font-size: 14px;
+    color: #334155;
+    line-height: 1.7;
+    margin-bottom: 15px;
+    white-space: pre-line;
+}
+
+.post-card .post-media-video {
+    width: 100%;
+    border-radius: 6px;
+    margin: 15px 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.post-card .post-media-img {
+    max-width: 100%;
+    border-radius: 6px;
+    margin: 15px 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Reacciones */
+.reacciones-container {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 15px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.btn-reaccion {
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    padding: 5px 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: bold;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.btn-reaccion:hover {
+    background: #e2e8f0;
+}
+
+.btn-reaccion.activo {
+    background: #dbeafe;
+    border-color: #3b82f6;
+}
+
+/* Comentarios */
+.seccion-comentarios-post {
+    border-top: 1px solid #e2e8f0;
+    padding-top: 15px;
+}
+
+.label-comentarios {
+    font-size: 13px;
+    font-weight: bold;
+    color: #0b1f4d;
+    display: block;
+    margin-bottom: 10px;
+}
+
+.lista-comentarios {
+    margin-bottom: 12px;
+}
+
+.comentario-item {
+    background: #ffffff;
+    border-left: 4px solid #2563eb;
+    padding: 10px 15px;
+    margin-bottom: 8px;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.comentario-item strong {
+    color: #0b1f4d;
+}
+
+.comentario-item small {
+    color: #94a3b8;
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+}
+
+.form-comentario {
+    display: flex;
+    gap: 8px;
+}
+
+.form-comentario input,
+.input-comentario {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 13px;
+}
+
+.btn-comentar {
+    background: #2563eb;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 13px;
+    transition: background 0.2s;
+}
+
+.btn-comentar:hover {
+    background: #1d4ed8;
+}
+
+/* ==========================================================
+   FORMULARIO DE CONTACTO
+   ========================================================== */
+.form-contacto-grid {
+    display: grid;
+    gap: 15px;
+}
+
+.form-contacto-grid .form-fila {
+    display: grid;
+    gap: 8px;
+}
+
+.form-contacto-grid label {
+    font-size: 14px;
+    font-weight: bold;
+    color: #334155;
+}
+
+.form-contacto-grid input,
+.form-contacto-grid textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 14px;
+}
+
+.form-contacto-grid textarea {
+    height: 100px;
+    resize: vertical;
+}
+
+.btn-enviar-mensaje {
+    background: #1e3a8a;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 15px;
+    width: 100%;
+    transition: background 0.2s;
+}
+
+.btn-enviar-mensaje:hover {
+    background: #0b1f4d;
+}
+
+.mensaje-exito {
+    display: none;
+    margin-top: 15px;
+    padding: 12px;
+    background: #d1fae5;
+    color: #065f46;
+    border-radius: 6px;
+    font-weight: bold;
+    text-align: center;
+}
+
+/* ==========================================================
+   FOOTER INSTITUCIONAL
+   ========================================================== */
+.footer-institucional {
+    background: linear-gradient(135deg, #0b1f4d 0%, #1e3a8a 100%);
+    color: #ffffff;
+    padding: 40px 20px 20px;
+    margin-top: 40px;
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.footer-container {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.footer-redes {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.footer-redes a {
+    color: #ffffff;
+    font-size: 22px;
+    transition: transform 0.2s ease, opacity 0.2s;
+    text-decoration: none;
+}
+
+.footer-redes a:hover {
+    transform: translateY(-2px);
+    opacity: 0.8;
+}
+
+.footer-info {
+    text-align: center;
+    font-size: 13px;
+    color: #cbd5e1;
+    line-height: 1.6;
+}
+
+.footer-info .portal-nombre {
+    font-weight: bold;
+    color: #ffffff;
+    font-size: 15px;
+}
+
+.footer-copy {
+    border-top: 1px solid #33415a;
+    margin-top: 20px;
+    padding-top: 15px;
+    text-align: center;
+    font-size: 12px;
+    color: #64748b;
+}
+
+/* Responsividad */
+@media (max-width: 600px) {
+    .header-institucional h1 {
+        font-size: 20px;
+    }
+
+    .menu-navegacion a {
+        padding: 12px 16px;
+        font-size: 13px;
+    }
+
+    .seccion-fija {
+        padding: 25px 15px;
+    }
+
+    .seccion-fija .seccion-header h2 {
+        font-size: 20px;
+    }
+
+    .post-card {
+        padding: 15px;
+    }
+
+    .footer-institucional {
+        padding: 30px 15px 15px;
+    }
+
+    .form-comentario {
+        flex-direction: column;
+    }
+
+    .btn-comentar {
+        width: 100%;
+    }
+}
+
+/* ==========================================================
+   BOTÓN DE ACCESO ADMIN OCULTO (cara de Maneiro)
+   ========================================================== */
+.admin-link-oculto {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 44px;
+    height: 44px;
+    background: rgba(30, 58, 138, 0.12);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    z-index: 999;
+    border: 1px solid rgba(30, 58, 138, 0.2);
+    text-decoration: none;
+    overflow: hidden;
+}
+
+.admin-link-oculto.visible {
+    opacity: 0.25;
+    visibility: visible;
+}
+
+.admin-link-oculto:hover {
+    opacity: 1;
+    transform: scale(1.15);
+}
+
+.admin-link-oculto .admin-foto {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 2px solid #ffffff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+/* ==========================================================
+   ENLACE DISCRETO ADMIN EN FOOTER
+   ========================================================== */
+.admin-discreto {
+    position: absolute;
+    bottom: 8px;
+    right: 12px;
+    font-size: 11px;
+    color: #475569;
+    text-decoration: none;
+    opacity: 0.3;
+    transition: opacity 0.3s, color 0.3s;
+    cursor: pointer;
+    user-select: none;
+}
+
+.admin-discreto:hover {
+    opacity: 1;
+    color: #1e3a8a;
+}
+
+@media (max-width: 600px) {
+    .admin-link-oculto {
+        bottom: 15px;
+        right: 15px;
+        width: 36px;
+        height: 36px;
+    }
+    
+    .admin-discreto {
+        bottom: 6px;
+        right: 8px;
+        font-size: 10px;
+    }
+}
+
+/* ==========================================================
+   PANEL DEL VISITANTE (INCÓGNITO)
+   ========================================================== */
+.panel-visitante {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.9);
+    width: 90%;
+    max-width: 420px;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid #e2e8f0;
+    overflow: hidden;
+}
+
+.panel-visitante.activo {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.panel-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(15, 23, 42, 0.5);
+    z-index: 999;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.panel-overlay.activo {
+    opacity: 1;
+    visibility: visible;
+}
+
+.panel-visitante-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, #0b1f4d 0%, #1e3a8a 100%);
+    color: #ffffff;
+    border-bottom: 1px solid #33415a;
+}
+
+.panel-visitante-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.btn-cerrar-panel {
+    background: none;
+    border: none;
+    color: #ffffff;
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background 0.2s;
+}
+
+.btn-cerrar-panel:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.panel-visitante-content {
+    padding: 20px;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.panel-seccion {
+    margin-bottom: 24px;
+}
+
+.panel-seccion:last-child {
+    margin-bottom: 0;
+}
+
+.panel-seccion h4 {
+    font-size: 13px;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+.stat-item {
+    background: #f8fafc;
+    padding: 16px;
+    border-radius: 8px;
+    text-align: center;
+    border: 1px solid #e2e8f0;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.stat-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.stat-num {
+    display: block;
+    font-size: 28px;
+    font-weight: 700;
+    color: #1e3a8a;
+    line-height: 1;
+    margin-bottom: 4px;
+}
+
+.stat-label {
+    font-size: 12px;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.accesos-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+}
+
+.acceso-btn {
+    display: block;
+    padding: 12px 16px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    color: #334155;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 14px;
+    text-align: center;
+    transition: all 0.2s ease;
+}
+
+.acceso-btn:hover {
+    background: #e0f2fe;
+    border-color: #3b82f6;
+    color: #1e3a8a;
+    transform: translateY(-1px);
+}
+
+/* Botón de admin discreto en panel visitante */
+.acceso-btn.admin-desde-visitante {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    color: #64748b;
+    font-size: 12px;
+    opacity: 0.6;
+}
+
+.acceso-btn.admin-desde-visitante:hover {
+    background: #e2e8f0;
+    border-color: #94a3b8;
+    color: #334155;
+    opacity: 1;
+}
+
+.panel-info {
+    font-size: 13px;
+    color: #64748b;
+    line-height: 1.6;
+    text-align: center;
+    margin: 0;
+}
+
+/* ==========================================================
+   BOTONES DE LIMPIEZA EN ADMIN
+   ========================================================== */
+.admin-card button[style*="background: #f97316"],
+.admin-card button[style*="background: #ef4444"] {
+    transition: all 0.2s ease;
+}
+
+.admin-card button[style*="background: #f97316"]:hover {
+    background: #ea580c !important;
+}
+
+.admin-card button[style*="background: #ef4444"]:hover {
+    background: #dc2626 !important;
+}
