@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Administración - Alfredo Maneiro</title>
+    <style>
+        body { background-color: #f1f5f9; font-family: Arial, sans-serif; margin: 0; padding: 0; }
+        .admin-header { background: #1e3a8a; color: white; padding: 20px; text-align: center; }
+        .admin-container { max-width: 850px; margin: 30px auto; padding: 0 15px; }
+        .admin-card { background: #ffffff; padding: 25px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .admin-card h2 { margin-top: 0; color: #1e3a8a; font-size: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }
+        label { display: block; margin-bottom: 6px; font-weight: bold; color: #334155; font-size: 14px; }
+        textarea, input[type="text"], input[type="password"], input[type="file"] { width: 100%; padding: 10px; margin-bottom: 12px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
+        textarea { height: 120px; resize: vertical; }
+        .btn-actualizar { background: #2563eb; color: white; border: none; padding: 10px 20px; font-size: 15px; font-weight: bold; border-radius: 6px; cursor: pointer; }
+        .btn-actualizar:hover { background: #1d4ed8; }
+        .btn-eliminar { background: #ef4444; color: white; border: none; padding: 6px 12px; font-size: 12px; border-radius: 4px; cursor: pointer; }
+        .btn-eliminar:hover { background: #dc2626; }
+        #pantalla-login { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(15, 23, 42, 0.85); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+        .login-box { background: #ffffff; padding: 30px; border-radius: 12px; width: 400px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        .item-lista { display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 10px 15px; border: 1px solid #e2e8f0; border-radius: 6px; margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+
+    <!-- PANTALLA DE ACCESO -->
+    <div id="pantalla-login">
+        <div class="login-box">
+            <h2>🔒 ACCESO RESTRINGIDO</h2>
+            <label for="input-clave" style="text-align: left;">Contraseña</label>
+            <input type="password" id="input-clave" placeholder="Ingrese su clave">
+            <button onclick="verificarClave()" style="width: 100%; background-color: #0b1f4d; padding: 10px; cursor: pointer; color: white; border: none; border-radius: 5px; font-weight: bold;">Ingresar al Panel</button>
+            <p id="error-clave" style="color: #ef4444; font-size: 13px; display: none;">Contraseña incorrecta.</p>
+        </div>
+    </div>
+
+    <!-- PANEL DE ADMINISTRACIÓN PRINCIPAL -->
+    <div id="panel-contenido" style="display: none;">
+        <div class="admin-header">
+            <h1>Panel de Administración - Alfredo Maneiro</h1>
+            <p style="margin: 5px 0 0 0; font-size: 14px; color: #93c5fd;">Gestión de contenidos del portal</p>
+        </div>
+
+        <div class="admin-container">
+
+            <!-- 1. SECCIÓN INICIO / NOTICIAS -->
+            <div class="admin-card">
+                <h2>🏠 Sección Inicio (Publicaciones y Noticias)</h2>
+                <label for="admin-titulo">Título:</label>
+                <input type="text" id="admin-titulo" placeholder="Título de la publicación...">
+                <label for="admin-texto-inicio">Contenido:</label>
+                <textarea id="admin-texto-inicio" placeholder="Escribe el mensaje o noticia..."></textarea>
+                <label for="admin-archivo-inicio">Adjuntar Imagen o Video opcional:</label>
+                <input type="file" id="admin-archivo-inicio" accept="image/*,video/*">
+                <button class="btn-actualizar" onclick="publicarInicio(event)">Publicar en Inicio</button>
+            </div>
+
+            <!-- 2. SECCIÓN VIDA -->
+            <div class="admin-card">
+                <h2>📖 Sección Vida (Biografía)</h2>
+                <label for="admin-vida">Editar texto de la Biografía:</label>
+                <textarea id="admin-vida" placeholder="Escribe la biografía completa de Alfredo Maneiro..."></textarea>
+                <button class="btn-actualizar" onclick="guardarSeccionTexto('vida', 'admin-vida', 'Biografía')">Guardar Cambios de Vida</button>
+            </div>
+
+            <!-- 3. SECCIÓN OBRA -->
+            <div class="admin-card">
+                <h2>📜 Sección Obra (Pensamiento y Legado)</h2>
+                <label for="admin-obra">Editar texto de la Obra:</label>
+                <textarea id="admin-obra" placeholder="Escribe sobre la obra, escritos y pensamiento..."></textarea>
+                <button class="btn-actualizar" onclick="guardarSeccionTexto('obra', 'admin-obra', 'Obra')">Guardar Cambios de Obra</button>
+            </div>
+
+            <!-- 4. SECCIÓN FOTOS -->
+            <div class="admin-card">
+                <h2>📷 Sección Fotos (Galería)</h2>
+                <input type="file" id="admin-foto-archivo" accept="image/*">
+                <input type="text" id="admin-foto-nombre" placeholder="Título o descripción de la foto">
+                <button class="btn-actualizar" onclick="subirMultimedia('fotos', 'admin-foto-archivo', 'admin-foto-nombre', 'image', event)">Subir Foto a la Galería</button>
+            </div>
+
+            <!-- 5. SECCIÓN VIDEOS -->
+            <div class="admin-card">
+                <h2>🎥 Sección Videos</h2>
+                <input type="file" id="admin-video-archivo" accept="video/*">
+                <input type="text" id="admin-video-nombre" placeholder="Título del video">
+                <button class="btn-actualizar" onclick="subirMultimedia('videos', 'admin-video-archivo', 'admin-video-nombre', 'video', event)">Subir Video</button>
+            </div>
+
+            <!-- 6. SECCIÓN CONTACTO Y REDES SOCIALES POR SEPARADO -->
+            <div class="admin-card">
+                <h2>📞 Sección Contacto y Redes Sociales</h2>
+                
+                <label for="admin-contacto-email">Correo Electrónico:</label>
+                <input type="text" id="admin-contacto-email" placeholder="ejemplo@correo.com">
+
+                <label for="admin-contacto-whatsapp">Número de WhatsApp:</label>
+                <input type="text" id="admin-contacto-whatsapp" placeholder="+58 412...">
+
+                <label for="admin-contacto-tiktok">Usuario de TikTok:</label>
+                <input type="text" id="admin-contacto-tiktok" placeholder="@tu_usuario">
+
+                <label for="admin-contacto-instagram">Usuario de Instagram:</label>
+                <input type="text" id="admin-contacto-instagram" placeholder="@tu_usuario">
+
+                <label for="admin-contacto-facebook">Perfil o Página de Facebook:</label>
+                <input type="text" id="admin-contacto-facebook" placeholder="Nombre o enlace de Facebook">
+
+                <label for="admin-contacto-x">Usuario de X (Twitter):</label>
+                <input type="text" id="admin-contacto-x" placeholder="@tu_usuario">
+
+                <button class="btn-actualizar" onclick="guardarRedesContacto()">Guardar Redes y Contacto</button>
+            </div>
+
+            <!-- GESTOR GENERAL DE ELEMENTOS -->
+            <div class="admin-card">
+                <h2>⚙️ Gestionar Publicaciones Activas en Inicio</h2>
+                <div id="lista-admin-inicio">
+                    <p style="color: #64748b; font-size: 14px;">Cargando...</p>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-bottom: 40px;">
+                <a href="/" target="_blank" style="color: #2563eb; text-decoration: none; font-weight: bold; font-size: 16px;">🔗 Abrir la página principal del visitante</a>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        function verificarClave() {
+            let ingresada = document.getElementById('input-clave').value.trim();
+            if (ingresada === "Apure47**") {
+                document.getElementById('pantalla-login').style.display = 'none';
+                document.getElementById('panel-contenido').style.display = 'block';
+                cargarDatosIniciales();
+            } else {
+                document.getElementById('error-clave').style.display = 'block';
+            }
+        }
+
+        function cargarDatosIniciales() {
+            // Cargar textos de Vida y Obra
+            document.getElementById('admin-vida').value = localStorage.getItem('texto_vida') || '';
+            document.getElementById('admin-obra').value = localStorage.getItem('texto_obra') || '';
+            
+            // Cargar datos individuales de contacto y redes sociales
+            document.getElementById('admin-contacto-email').value = localStorage.getItem('contacto_email') || '';
+            document.getElementById('admin-contacto-whatsapp').value = localStorage.getItem('contacto_whatsapp') || '';
+            document.getElementById('admin-contacto-tiktok').value = localStorage.getItem('contacto_tiktok') || '';
+            document.getElementById('admin-contacto-instagram').value = localStorage.getItem('contacto_instagram') || '';
+            document.getElementById('admin-contacto-facebook').value = localStorage.getItem('contacto_facebook') || '';
+            document.getElementById('admin-contacto-x').value = localStorage.getItem('contacto_x') || '';
+
+            actualizarListaInicio();
+        }
+
+        // Guardar textos fijos (Vida, Obra)
+        function guardarSeccionTexto(claveLocal, idTextarea, nombreSeccion) {
+            let texto = document.getElementById(idTextarea).value;
+            localStorage.setItem('texto_' + claveLocal, texto);
+            alert("¡Sección de " + nombreSeccion + " actualizada correctamente!");
+        }
+
+        // Guardar Redes Sociales y Contacto por separado
+        function guardarRedesContacto() {
+            localStorage.setItem('contacto_email', document.getElementById('admin-contacto-email').value.trim());
+            localStorage.setItem('contacto_whatsapp', document.getElementById('admin-contacto-whatsapp').value.trim());
+            localStorage.setItem('contacto_tiktok', document.getElementById('admin-contacto-tiktok').value.trim());
+            localStorage.setItem('contacto_instagram', document.getElementById('admin-contacto-instagram').value.trim());
+            localStorage.setItem('contacto_facebook', document.getElementById('admin-contacto-facebook').value.trim());
+            localStorage.setItem('contacto_x', document.getElementById('admin-contacto-x').value.trim());
+
+            alert("¡Información de contacto y redes sociales actualizada correctamente!");
+        }
+
+        // Publicar en la sección Inicio
+        async function publicarInicio(eventRef) {
+            let titulo = document.getElementById('admin-titulo').value.trim();
+            let texto = document.getElementById('admin-texto-inicio').value.trim();
+            let inputArchivo = document.getElementById('admin-archivo-inicio');
+
+            if (!titulo && !texto && (!inputArchivo.files || !inputArchivo.files[0])) {
+                alert("Debes rellenar al menos un título, texto o adjuntar un archivo.");
+                return;
+            }
+
+            const btn = eventRef.target;
+            let original = btn.textContent;
+            btn.textContent = "Procesando...";
+            btn.disabled = true;
+
+            let mediaUrl = "";
+            let mediaType = "";
+
+            try {
+                if (inputArchivo.files && inputArchivo.files[0]) {
+                    const file = inputArchivo.files[0];
+                    const formData = new FormData();
+                    formData.append('file', file);
+
+                    const response = await fetch('/upload', { method: 'POST', body: formData });
+                    const result = await response.json();
+
+                    if (result.success) {
+                        mediaUrl = result.url;
+                        mediaType = file.type.startsWith('video/') ? 'video' : 'image';
+                    } else {
+                        alert("Error al subir archivo: " + result.error);
+                        btn.textContent = original;
+                        btn.disabled = false;
+                        return;
+                    }
+                }
+
+                let nuevoPost = {
+                    id: 'post_' + Date.now(),
+                    titulo: titulo || "Actualización",
+                    texto: texto || "",
+                    mediaUrl: mediaUrl,
+                    mediaType: mediaType,
+                    fecha: new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                };
+
+                let noticias = JSON.parse(localStorage.getItem('portal_noticias')) || [];
+                noticias.unshift(nuevoPost);
+                localStorage.setItem('portal_noticias', JSON.stringify(noticias));
+
+                document.getElementById('admin-titulo').value = "";
+                document.getElementById('admin-texto-inicio').value = "";
+                inputArchivo.value = "";
+
+                alert("¡Publicación enviada a la sección Inicio con éxito!");
+                actualizarListaInicio();
+
+            } catch (error) {
+                alert("Error: " + error.message);
+            } finally {
+                btn.textContent = original;
+                btn.disabled = false;
+            }
+        }
+
+        // Subir Multimedia (Fotos o Videos independientes)
+        async function subirMultimedia(seccionDestino, idInputArchivo, idInputNombre, tipoMedio, eventRef) {
+            let inputArchivo = document.getElementById(idInputArchivo);
+            let nombreVal = document.getElementById(idInputNombre).value.trim();
+
+            if (!inputArchivo.files || !inputArchivo.files[0]) {
+                alert("Selecciona un archivo primero.");
+                return;
+            }
+
+            const btn = eventRef.target;
+            let original = btn.textContent;
+            btn.textContent = "Subiendo al servidor...";
+            btn.disabled = true;
+
+            try {
+                const file = inputArchivo.files[0];
+                const formData = new FormData();
+                formData.append('file', file);
+
+                const response = await fetch('/upload', { method: 'POST', body: formData });
+                const result = await response.json();
+
+                if (result.success) {
+                    let elementoNuevo = {
+                        id: 'media_' + Date.now(),
+                        titulo: nombreVal || "Archivo sin título",
+                        url: result.url,
+                        tipo: tipoMedio,
+                        fecha: new Date().toLocaleDateString()
+                    };
+
+                    let keyStorage = seccionDestino === 'fotos' ? 'portal_fotos' : 'portal_videos';
+                    let lista = JSON.parse(localStorage.getItem(keyStorage)) || [];
+                    lista.unshift(elementoNuevo);
+                    localStorage.setItem(keyStorage, JSON.stringify(lista));
+
+                    inputArchivo.value = "";
+                    document.getElementById(idInputNombre).value = "";
+                    alert("¡Archivo subido y añadido a la sección de " + seccionDestino.toUpperCase() + " correctamente!");
+                } else {
+                    alert("Error: " + result.error);
+                }
+            } catch (error) {
+                alert("Fallo de subida: " + error.message);
+            } finally {
+                btn.textContent = original;
+                btn.disabled = false;
+            }
+        }
+
+        function actualizarListaInicio() {
+            let contenedor = document.getElementById('lista-admin-inicio');
+            let noticias = JSON.parse(localStorage.getItem('portal_noticias')) || [];
+
+            if (noticias.length === 0) {
+                contenedor.innerHTML = '<p style="color: #64748b; font-size: 14px;">No hay publicaciones en el inicio.</p>';
+                return;
+            }
+
+            let html = '';
+            noticias.forEach(function(n, index) {
+                html += '<div class="item-lista">' +
+                    '<div><strong>' + n.titulo + '</strong><br><small style="color:#64748b;">' + n.fecha + '</small></div>' +
+                    '<button class="btn-eliminar" onclick="eliminarPost(' + index + ')">Eliminar</button>' +
+                '</div>';
+            });
+            contenedor.innerHTML = html;
+        }
+
+        // Eliminar publicación del inicio
+        function eliminarPost(index) {
+            if (confirm("¿Estás seguro de eliminar esta publicación?")) {
+                let noticias = JSON.parse(localStorage.getItem('portal_noticias')) || [];
+                noticias.splice(index, 1);
+                localStorage.setItem('portal_noticias', JSON.stringify(noticias));
+                actualizarListaInicio();
+            }
+        }
+    </script>
+</body>
+</html>
