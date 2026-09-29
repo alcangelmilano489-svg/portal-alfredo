@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pensamiento y Acción - Portal Informativo Alfredo Maneiro</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="/style.css">
     <link rel="icon" href="/favicon.ico" type="image/x-icon">
 </head>
 <body>
@@ -316,7 +316,6 @@
 
             contenedor.innerHTML = htmlTotal;
 
-            for (var j = 0; j < noticiasAdmin.lgth; j++) { /* safety loop */ }
             for (var j = 0; j < noticiasAdmin.length; j++) {
                 var nItem = noticiasAdmin[j];
                 var tituloItemLimpio = 'post';
