@@ -42,6 +42,9 @@ os.makedirs(DATA_FOLDER, exist_ok=True)
 
 app = Flask(__name__)
 
+# Configuración opcional para permitir archivos grandes sin restricciones (ej: 500MB)
+app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024
+
 
 # ============================================================
 # TIPOS PERMITIDOS
@@ -188,7 +191,7 @@ def agregar_cors(respuesta):
 
 
 # ============================================================
-# INICIO (MUESTRA LA PÁGINA WEB VISUAL)
+# INICIO Y PANEL DE ADMINISTRACIÓN
 # ============================================================
 
 @app.route("/")
@@ -199,6 +202,11 @@ def inicio():
 @app.route("/index.html")
 def pagina_principal():
     return send_from_directory(BASE_DIR, "index.html")
+
+
+@app.route("/admin")
+def panel_admin():
+    return send_from_directory(BASE_DIR, "admin.html")
 
 
 # ============================================================
