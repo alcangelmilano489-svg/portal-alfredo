@@ -1,13 +1,25 @@
 import os
 import json
 import uuid
-
+import cloudinary
+import cloudinary.uploader
 from flask import Flask, request, jsonify, send_from_directory
 from werkzeug.utils import secure_filename
 
 
 # ============================================================
-# CONFIGURACIÓN
+# CONFIGURACIÓN DE CLOUDINARY
+# ============================================================
+
+cloudinary.config(
+    cloud_name="cj5tfi7j",
+    api_key="611496724184694",
+    api_secret="mJoTfVqesdDJt5vAIPi720yDvZS",
+)
+
+
+# ============================================================
+# CONFIGURACIÓN GENERAL
 # ============================================================
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -29,13 +41,6 @@ os.makedirs(DATA_FOLDER, exist_ok=True)
 # ============================================================
 
 app = Flask(__name__)
-
-
-# IMPORTANTE:
-# No colocamos MAX_CONTENT_LENGTH.
-# Flask no impondrá un límite de tamaño propio.
-#
-# El límite real dependerá del servidor/hosting que utilices.
 
 
 # ============================================================
@@ -156,7 +161,6 @@ def guardar_publicaciones(publicaciones):
             indent=2
         )
 
-
     os.replace(
         archivo_temporal,
         POSTS_FILE
@@ -184,16 +188,17 @@ def agregar_cors(respuesta):
 
 
 # ============================================================
-# INICIO
+# INICIO (MUESTRA LA PÁGINA WEB VISUAL)
 # ============================================================
 
 @app.route("/")
 def inicio():
+    return send_from_directory(BASE_DIR, "index.html")
 
-    return jsonify({
-        "success": True,
-        "mensaje": "Servidor funcionando correctamente"
-    })
+
+@app.route("/index.html")
+def pagina_principal():
+    return send_from_directory(BASE_DIR, "index.html")
 
 
 # ============================================================
@@ -210,7 +215,7 @@ def health():
 
 
 # ============================================================
-# SUBIR IMAGEN O VIDEO
+# SUBIR IMAGEN O VIDEO A CLOUDINARY
 # ============================================================
 
 @app.route("/upload", methods=["POST", "OPTIONS"])
@@ -219,7 +224,6 @@ def upload():
     if request.method == "OPTIONS":
 
         return "", 204
-
 
     try:
 
@@ -230,13 +234,9 @@ def upload():
                 "error": "No se recibió ningún archivo."
             }), 400
 
-
         archivo = request.files["file"]
 
-
-        # Evita el problema str | None de VS Code
         nombre_original = archivo.filename or ""
-
 
         if not nombre_original:
 
@@ -245,7 +245,6 @@ def upload():
                 "error": "No se seleccionó ningún archivo."
             }), 400
 
-
         if not archivo_permitido(nombre_original):
 
             return jsonify({
@@ -253,133 +252,66 @@ def upload():
                 "error": "Tipo de archivo no permitido."
             }), 400
 
-
-        nombre_seguro = secure_filename(
-            nombre_original
-        )
-
-
-        if not nombre_seguro:
-
-            return jsonify({
-                "success": False,
-                "error": "El nombre del archivo no es válido."
-            }), 400
-
-
-        extension = obtener_extension(
-            nombre_seguro
-        )
-
-
-        tipo = tipo_archivo(
-            nombre_seguro
-        )
-
-
-        # Nombre único para evitar reemplazar archivos
+        tipo = tipo_archivo(nombre_original)
+        extension = obtener_extension(nombre_original)
         identificador = uuid.uuid4().hex
 
-
-        nombre_final = (
-            identificador
-            + "_"
-            + nombre_seguro
-        )
-
-
-        ruta_archivo = os.path.join(
-            UPLOAD_FOLDER,
-            nombre_final
-        )
-
-
         print("")
         print("======================================")
-        print("NUEVA SUBIDA")
+        print("SUBIENDO A CLOUDINARY")
         print("Archivo:", nombre_original)
         print("Tipo:", tipo)
-        print("Destino:", ruta_archivo)
         print("======================================")
         print("")
 
+        resultado_cloudinary = cloudinary.uploader.upload(
+            archivo,
+            resource_type="auto",
+            folder="portal_alfredo"
+        )
 
-        # Guarda directamente en disco
-        archivo.save(ruta_archivo)
+        url_nube = resultado_cloudinary.get("secure_url")
+        public_id = resultado_cloudinary.get("public_id")
+        tamaño = resultado_cloudinary.get("bytes", 0)
 
-
-        if not os.path.exists(ruta_archivo):
+        if not url_nube:
 
             return jsonify({
                 "success": False,
-                "error": "No se pudo guardar el archivo."
+                "error": "No se pudo subir el archivo a Cloudinary."
             }), 500
 
-
-        tamaño = os.path.getsize(
-            ruta_archivo
-        )
-
-
-        # ====================================================
-        # CREAR PUBLICACIÓN
-        # ====================================================
-
         publicacion = {
-
             "id": identificador,
-
             "nombre": nombre_original,
-
-            "archivo": nombre_final,
-
+            "archivo": public_id,
             "tipo": tipo,
-
             "extension": extension,
-
             "tamaño": tamaño,
-
-            "url": "/uploads/" + nombre_final,
-
-            "fecha": __import__("datetime")
-                .datetime.now()
-                .isoformat()
-
+            "url": url_nube,
+            "fecha": __import__("datetime").datetime.now().isoformat()
         }
 
-
         publicaciones = cargar_publicaciones()
-
 
         publicaciones.insert(
             0,
             publicacion
         )
 
-
         guardar_publicaciones(
             publicaciones
         )
 
-
         return jsonify({
-
             "success": True,
-
-            "mensaje": "Archivo publicado correctamente.",
-
+            "mensaje": "Archivo publicado correctamente en Cloudinary.",
             "id": identificador,
-
-            "url": "/uploads/" + nombre_final,
-
-            "filename": nombre_final,
-
+            "url": url_nube,
+            "filename": public_id,
             "tipo": tipo,
-
             "publicacion": publicacion
-
         })
-
 
     except Exception as error:
 
@@ -388,13 +320,9 @@ def upload():
         print(error)
         print("")
 
-
         return jsonify({
-
             "success": False,
-
             "error": str(error)
-
         }), 500
 
 
@@ -409,136 +337,75 @@ def publicaciones():
 
         datos = cargar_publicaciones()
 
-
         return jsonify({
-
             "success": True,
-
             "publicaciones": datos
-
         })
-
 
     except Exception as error:
 
         return jsonify({
-
             "success": False,
-
             "error": str(error),
-
             "publicaciones": []
-
         }), 500
 
 
 # ============================================================
-# SERVIR IMÁGENES Y VIDEOS
+# SERVIR ARCHIVOS ESTÁTICOS / CSS / JS / IMÁGENES LOCALES
 # ============================================================
 
-@app.route("/uploads/<path:nombre>")
+@app.route("/<path:nombre>")
 def servir_archivo(nombre):
-
-    return send_from_directory(
-
-        UPLOAD_FOLDER,
-
-        nombre,
-
-        conditional=True
-
-    )
+    return send_from_directory(BASE_DIR, nombre, conditional=True)
 
 
 # ============================================================
 # ELIMINAR PUBLICACIÓN
 # ============================================================
 
-@app.route(
-    "/api/publicaciones/<id_publicacion>",
-    methods=["DELETE", "OPTIONS"]
-)
+@app.route("/api/publicaciones/<id_publicacion>", methods=["DELETE", "OPTIONS"])
 def eliminar_publicacion(id_publicacion):
 
     if request.method == "OPTIONS":
 
         return "", 204
 
-
     try:
 
         publicaciones = cargar_publicaciones()
 
-
         encontrada = None
-
         restantes = []
-
 
         for publicacion in publicaciones:
 
-            if str(publicacion.get("id")) == str(
-                id_publicacion
-            ):
-
+            if str(publicacion.get("id")) == str(id_publicacion):
                 encontrada = publicacion
-
             else:
-
                 restantes.append(publicacion)
-
 
         if encontrada is None:
 
             return jsonify({
-
                 "success": False,
-
                 "error": "Publicación no encontrada."
-
             }), 404
-
-
-        nombre_archivo = encontrada.get(
-            "archivo"
-        )
-
-
-        if nombre_archivo:
-
-            ruta = os.path.join(
-                UPLOAD_FOLDER,
-                nombre_archivo
-            )
-
-
-            if os.path.exists(ruta):
-
-                os.remove(ruta)
-
 
         guardar_publicaciones(
             restantes
         )
 
-
         return jsonify({
-
             "success": True,
-
             "mensaje": "Publicación eliminada."
-
         })
-
 
     except Exception as error:
 
         return jsonify({
-
             "success": False,
-
             "error": str(error)
-
         }), 500
 
 
@@ -555,26 +422,18 @@ if __name__ == "__main__":
         )
     )
 
-
     print("")
     print("======================================")
-    print("SERVIDOR ALFREDO MANEIRO")
+    print("SERVIDOR ALFREDO MANEIRO (CLOUDINARY)")
     print("======================================")
     print("Puerto:", puerto)
-    print("Carpeta de archivos:", UPLOAD_FOLDER)
     print("Servidor iniciado.")
     print("======================================")
     print("")
 
-
     app.run(
-
         host="0.0.0.0",
-
         port=puerto,
-
         debug=False,
-
         threaded=True
-
     )
