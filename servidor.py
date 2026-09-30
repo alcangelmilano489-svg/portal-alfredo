@@ -196,6 +196,11 @@ def inicio():
     return send_from_directory(BASE_DIR, "index.html")
 
 
+@app.route("/index.html")
+def pagina_principal():
+    return send_from_directory(BASE_DIR, "index.html")
+
+
 # ============================================================
 # ESTADO DEL SERVIDOR
 # ============================================================
