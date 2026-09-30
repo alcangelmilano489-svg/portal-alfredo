@@ -14,7 +14,7 @@ from werkzeug.utils import secure_filename
 cloudinary.config(
     cloud_name="cj5tfi7j",
     api_key="611496724184694",
-    api_secret="mJoTfVqesdDJt5vAIPi720yDvZS",
+    api_secret="mJoTfVqesdDJt5vAIPl720yDvZ8",
 )
 
 
