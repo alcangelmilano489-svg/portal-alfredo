@@ -1,10 +1,18 @@
 import os
-import json
 import uuid
 import cloudinary
 import cloudinary.uploader
 from flask import Flask, request, jsonify, send_from_directory
-from werkzeug.utils import secure_filename
+from supabase import create_client, Client
+
+# ============================================================
+# CONFIGURACIÓN DE SUPABASE
+# ============================================================
+
+SUPABASE_URL = "https://ggeevxhnhsfvtwjdmssz.supabase.co"
+SUPABASE_KEY = "sb_publishable_X7GVbu1iWox1BRWo7m6a5w_j7Onq_V7"
+
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 
 # ============================================================
@@ -26,14 +34,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
 
-DATA_FOLDER = os.path.join(BASE_DIR, "data")
-
-POSTS_FILE = os.path.join(DATA_FOLDER, "publicaciones.json")
-
-
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-os.makedirs(DATA_FOLDER, exist_ok=True)
 
 
 # ============================================================
@@ -81,7 +82,7 @@ EXTENSIONES_PERMITIDAS = (
 
 
 # ============================================================
-# FUNCIONES
+# FUNCIONES AUXILIARES
 # ============================================================
 
 def obtener_extension(nombre):
@@ -116,58 +117,23 @@ def archivo_permitido(nombre):
 
 
 def cargar_publicaciones():
-
-    if not os.path.exists(POSTS_FILE):
-        return []
-
+    """Obtiene todas las publicaciones desde la base de datos de Supabase."""
     try:
-
-        with open(
-            POSTS_FILE,
-            "r",
-            encoding="utf-8"
-        ) as archivo:
-
-            contenido = archivo.read().strip()
-
-            if not contenido:
-                return []
-
-            datos = json.loads(contenido)
-
-            if isinstance(datos, list):
-                return datos
-
-            return []
-
+        response = supabase.table("publicaciones").select("*").order("fecha", desc=True).execute()
+        return response.data if response.data else []
     except Exception as error:
-
-        print("ERROR LEYENDO PUBLICACIONES:", error)
-
+        print("ERROR LEYENDO PUBLICACIONES DE SUPABASE:", error)
         return []
 
 
-def guardar_publicaciones(publicaciones):
-
-    archivo_temporal = POSTS_FILE + ".tmp"
-
-    with open(
-        archivo_temporal,
-        "w",
-        encoding="utf-8"
-    ) as archivo:
-
-        json.dump(
-            publicaciones,
-            archivo,
-            ensure_ascii=False,
-            indent=2
-        )
-
-    os.replace(
-        archivo_temporal,
-        POSTS_FILE
-    )
+def guardar_publicacion_supabase(publicacion):
+    """Inserta una nueva publicación en la tabla de Supabase."""
+    try:
+        response = supabase.table("publicaciones").insert(publicacion).execute()
+        return response.data
+    except Exception as error:
+        print("ERROR GUARDANDO EN SUPABASE:", error)
+        raise error
 
 
 # ============================================================
@@ -228,7 +194,7 @@ def health():
 
 
 # ============================================================
-# SUBIR IMAGEN O VIDEO A CLOUDINARY
+# SUBIR IMAGEN O VIDEO A CLOUDINARY Y SUPABASE
 # ============================================================
 
 @app.route("/upload", methods=["POST", "OPTIONS"])
@@ -305,20 +271,12 @@ def upload():
             "fecha": __import__("datetime").datetime.now().isoformat()
         }
 
-        publicaciones = cargar_publicaciones()
-
-        publicaciones.insert(
-            0,
-            publicacion
-        )
-
-        guardar_publicaciones(
-            publicaciones
-        )
+        # Guardar directamente en la base de datos de Supabase
+        guardar_publicacion_supabase(publicacion)
 
         return jsonify({
             "success": True,
-            "mensaje": "Archivo publicado correctamente en Cloudinary.",
+            "mensaje": "Archivo publicado correctamente en Supabase y Cloudinary.",
             "id": identificador,
             "url": url_nube,
             "filename": public_id,
@@ -385,33 +343,12 @@ def eliminar_publicacion(id_publicacion):
         return "", 204
 
     try:
-
-        publicaciones = cargar_publicaciones()
-
-        encontrada = None
-        restantes = []
-
-        for publicacion in publicaciones:
-
-            if str(publicacion.get("id")) == str(id_publicacion):
-                encontrada = publicacion
-            else:
-                restantes.append(publicacion)
-
-        if encontrada is None:
-
-            return jsonify({
-                "success": False,
-                "error": "Publicación no encontrada."
-            }), 404
-
-        guardar_publicaciones(
-            restantes
-        )
+        # Eliminar el registro directamente de la tabla en Supabase
+        response = supabase.table("publicaciones").delete().eq("id", str(id_publicacion)).execute()
 
         return jsonify({
             "success": True,
-            "mensaje": "Publicación eliminada."
+            "mensaje": "Publicación eliminada de Supabase."
         })
 
     except Exception as error:
@@ -437,7 +374,7 @@ if __name__ == "__main__":
 
     print("")
     print("======================================")
-    print("SERVIDOR ALFREDO MANEIRO (CLOUDINARY)")
+    print("SERVIDOR ALFREDO MANEIRO (SUPABASE)")
     print("======================================")
     print("Puerto:", puerto)
     print("Servidor iniciado.")
