@@ -206,8 +206,12 @@ def pagina_principal():
 
 @app.route("/admin")
 def panel_admin():
-    # Usamos una ruta absoluta directa para asegurar que encuentre el admin.html
-    return send_from_directory(os.path.join(BASE_DIR), "admin.html")
+    try:
+        ruta_archivo = os.path.join(BASE_DIR, "admin.html")
+        with open(ruta_archivo, "r", encoding="utf-8") as f:
+            return f.read()
+    except Exception as e:
+        return f"No se pudo cargar el panel admin. Error: {str(e)}", 404
 
 
 # ============================================================
