@@ -188,16 +188,12 @@ def agregar_cors(respuesta):
 
 
 # ============================================================
-# INICIO
+# INICIO (MUESTRA LA PÁGINA WEB VISUAL)
 # ============================================================
 
 @app.route("/")
 def inicio():
-
-    return jsonify({
-        "success": True,
-        "mensaje": "Servidor funcionando correctamente con Cloudinary"
-    })
+    return send_from_directory(BASE_DIR, "index.html")
 
 
 # ============================================================
@@ -351,12 +347,12 @@ def publicaciones():
 
 
 # ============================================================
-# SERVIR ARCHIVOS LOCALES DE RESPALDO (CORREGIDO)
+# SERVIR ARCHIVOS ESTÁTICOS / CSS / JS / IMÁGENES LOCALES
 # ============================================================
 
-@app.route("/uploads/<path:nombre>")
+@app.route("/<path:nombre>")
 def servir_archivo(nombre):
-    return send_from_directory(UPLOAD_FOLDER, nombre, conditional=True)
+    return send_from_directory(BASE_DIR, nombre, conditional=True)
 
 
 # ============================================================
