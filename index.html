@@ -3,35 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pensamiento y Acción - Portal Informativo Alfredo Maneiro</title>
-    <link rel="stylesheet" href="/style.css">
-    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <meta name="description" content="Portal informativo dedicado a Alfredo Maneiro.">
+    <title>Portal Informativo Alfredo Maneiro</title>
+    <link rel="stylesheet" href="/assets/style.css">
 </head>
 <body>
-
-    <!-- 1. HEADER INSTITUCIONAL -->
-    <header class="header-institucional" style="background: linear-gradient(135deg, #071730 0%, #0d234a 100%); border-bottom: 2px solid rgba(25, 118, 210, 0.4); padding: 22px 30px;">
-        <div style="display: flex; align-items: center; justify-content: center; gap: 22px; max-width: 1100px; margin: 0 auto; text-align: left;">
-            <div style="background: #ffffff; border-radius: 6px; padding: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); flex-shrink: 0;">
-                <img src="/logo_siembra.jpeg" alt="44 Años de su Siembra" style="height: 80px; width: 80px; object-fit: contain; border-radius: 4px; display: block;">
-            </div>
-            <div>
-                <h1 style="margin: 0 0 4px 0; color: #ffffff; font-size: 24px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;">
-                    Alfredo Maneiro
-                </h1>
-                <div style="font-size: 13px; color: #93c5fd; font-weight: 600; margin-bottom: 6px; letter-spacing: 0.5px;">
-                    30 de enero de 1937 &nbsp;|&nbsp; 24 de octubre de 1982
-                </div>
-                <div style="font-size: 15px; color: #f8fafc; font-weight: 500; font-style: italic; letter-spacing: 1px;">
-                    "El sueño del hombre"
-                </div>
-            </div>
-        </div>
+    <header class="header-institucional">
+        <div class="header-sub">Portal informativo</div>
+        <h1>Alfredo Maneiro</h1>
+        <p>30 de enero de 1937 | 24 de octubre de 1982</p>
     </header>
 
-    <!-- 2. MENÚ DE NAVEGACIÓN -->
-    <nav class="menu-navegacion">
-        <a href="#" class="tab-activo" onclick="activarTab(this); navegarSeccion(''); return false;">Inicio</a>
+    <nav class="menu-navegacion" aria-label="Navegación principal">
+        <a href="#inicio" class="tab-activo" onclick="activarTab(this); navegarSeccion(''); return false;">Inicio</a>
         <a href="#vida" onclick="activarTab(this); navegarSeccion('vida'); return false;">Vida</a>
         <a href="#obra" onclick="activarTab(this); navegarSeccion('obra'); return false;">Obra</a>
         <a href="#fotos" onclick="activarTab(this); navegarSeccion('fotos'); return false;">Fotos</a>
@@ -39,58 +23,52 @@
         <a href="#contacto-seccion" onclick="activarTab(this); navegarSeccion('contacto-seccion'); return false;">Contacto</a>
     </nav>
 
-    <!-- 3. CARRUSEL -->
-    <div class="carrusel-container">
-        <div class="carrusel-track" id="carrusel-dinamico">
-            <div class="foto-caja"><img src="/neiro1.jpeg" alt="Alfredo Maneiro"></div>
-            <div class="foto-caja"><img src="/maneiro2.jpeg" alt="Archivo Histórico"></div>
-            <div class="foto-caja"><img src="/maneiro3.jpeg" alt="Archivo Histórico"></div>
-            <div class="foto-caja"><img src="/maneiro4.jpeg" alt="Archivo Histórico"></div>
-            <div class="foto-caja"><img src="/maneiro5.jpeg" alt="Archivo Histórico"></div>
-            <div class="foto-caja"><img src="/maneiro7.jpeg" alt="Archivo Histórico"></div>
-            <div class="foto-caja"><img src="/maneiro8.jpeg" alt="Archivo Histórico"></div>
-            <div class="foto-caja"><img src="/neiro1.jpeg" alt="Alfredo Maneiro"></div>
-            <div class="foto-caja"><img src="/maneiro2.jpeg" alt="Archivo Histórico"></div>
-            <div class="foto-caja"><img src="/maneiro3.jpeg" alt="Archivo Histórico"></div>
-            <div class="foto-caja"><img src="/maneiro4.jpeg" alt="Archivo Histórico"></div>
-            <div class="foto-caja"><img src="/maneiro5.jpeg" alt="Archivo Histórico"></div>
-            <div class="foto-caja"><img src="/maneiro7.jpeg" alt="Archivo Histórico"></div>
-            <div class="foto-caja"><img src="/maneiro8.jpeg" alt="Archivo Histórico"></div>
+    <div class="carrusel-container" aria-label="Archivo fotográfico">
+        <div class="carrusel-track">
+            <div class="foto-caja"><img src="/assets/neiro1.jpeg" alt="Archivo fotográfico"></div>
+            <div class="foto-caja"><img src="/assets/maneiro2.jpeg" alt="Archivo fotográfico"></div>
+            <div class="foto-caja"><img src="/assets/maneiro3.jpeg" alt="Archivo fotográfico"></div>
+            <div class="foto-caja"><img src="/assets/maneiro4.jpeg" alt="Archivo fotográfico"></div>
+            <div class="foto-caja"><img src="/assets/maneiro5.jpeg" alt="Archivo fotográfico"></div>
+            <div class="foto-caja"><img src="/assets/maneiro7.jpeg" alt="Archivo fotográfico"></div>
+            <div class="foto-caja"><img src="/assets/maneiro8.jpeg" alt="Archivo fotográfico"></div>
+            <div class="foto-caja"><img src="/assets/neiro1.jpeg" alt="Archivo fotográfico"></div>
+            <div class="foto-caja"><img src="/assets/maneiro2.jpeg" alt="Archivo fotográfico"></div>
+            <div class="foto-caja"><img src="/assets/maneiro3.jpeg" alt="Archivo fotográfico"></div>
+            <div class="foto-caja"><img src="/assets/maneiro4.jpeg" alt="Archivo fotográfico"></div>
+            <div class="foto-caja"><img src="/assets/maneiro5.jpeg" alt="Archivo fotográfico"></div>
+            <div class="foto-caja"><img src="/assets/maneiro7.jpeg" alt="Archivo fotográfico"></div>
+            <div class="foto-caja"><img src="/assets/maneiro8.jpeg" alt="Archivo fotográfico"></div>
         </div>
     </div>
 
-    <!-- 4. SECCIÓN: VIDA -->
     <section id="vida" class="seccion-fija">
         <div class="seccion-header"><h2>Vida de Alfredo Maneiro</h2></div>
-        <div class="contenido-seccion" style="padding: 20px; color: #1e293b; line-height: 1.6;">
-            <p><strong>Alfredo Maneiro González:</strong> Político, filósofo y teórico venezolano (nacido en Caracas el 30 de enero de 1937 y fallecido el 24 de octubre de 1982).</p>
-            <p>Fue una de las figuras intelectuales y políticas más lúcidas de la izquierda venezolana contemporánea. Su pensamiento estuvo marcado por la búsqueda constante de nuevas formas de hacer política.</p>
+        <div class="contenido-seccion">
+            <p><strong>Alfredo Maneiro González</strong> fue un político, filósofo y teórico venezolano, nacido en Caracas el 30 de enero de 1937 y fallecido el 24 de octubre de 1982.</p>
+            <p>Su pensamiento estuvo marcado por la búsqueda de nuevas formas de hacer política y por el análisis de la realidad social venezolana.</p>
         </div>
     </section>
 
-    <!-- 5. SECCIÓN: OBRA -->
     <section id="obra" class="seccion-fija">
         <div class="seccion-header"><h2>Obra</h2></div>
-        <div class="contenido-seccion" style="padding: 20px; color: #1e293b;">
+        <div class="contenido-seccion">
             <p>Espacio dedicado al análisis y difusión de los aportes teóricos y políticos de Alfredo Maneiro.</p>
         </div>
     </section>
 
-    <!-- 6. SECCIÓN: FOTOS -->
     <section id="fotos" class="seccion-fija">
         <div class="seccion-header"><h2>Fotos</h2></div>
         <div id="galeria-fotos" class="galeria-fotos"></div>
     </section>
 
-    <!-- 7. SECCIÓN: VIDEOS -->
     <section id="videos" class="seccion-fija">
         <div class="seccion-header"><h2>Videos</h2></div>
         <div id="galeria-videos" class="galeria-videos"></div>
     </section>
 
-    <!-- 8. SECCIÓN: CONTACTO -->
     <section id="contacto-seccion" class="seccion-fija">
-        <div class="seccion-header"><h2>Contacto / Envíanos un mensaje</h2></div>
+        <div class="seccion-header"><h2>Contacto</h2></div>
         <form id="form-contacto" onsubmit="enviarMensajeContacto(event)" class="form-contacto-grid">
             <div class="form-fila">
                 <label for="contacto-nombre">Nombre:</label>
@@ -104,38 +82,34 @@
                 <label for="contacto-mensaje">Mensaje:</label>
                 <textarea id="contacto-mensaje" required placeholder="Escribe tu mensaje aquí..."></textarea>
             </div>
-            <button type="submit" class="btn-enviar-mensaje">Enviar Mensaje</button>
+            <button type="submit" class="btn-enviar-mensaje">Enviar mensaje</button>
         </form>
         <div id="mensaje-exito" class="mensaje-exito" style="display:none; color: green; margin-top: 10px;">¡Mensaje enviado con éxito!</div>
     </section>
 
-    <!-- 9. CONTENIDO PRINCIPAL -->
-    <main class="contenido-principal active">
+    <main id="inicio" class="contenido-principal active">
         <section class="seccion-publicaciones">
-            <h2>Publicaciones Recientes</h2>
+            <h2>Publicaciones recientes</h2>
             <p class="bienvenida">Espacio informativo y multimedia del portal.</p>
             <hr class="divisor">
             <div id="contenedor-noticias-admin">
-                <p class="mensaje-vacio">No hay publicaciones recientes en este momento.</p>
+                <p class="mensaje-vacio">Cargando publicaciones...</p>
             </div>
         </section>
     </main>
 
-    <!-- 10. FOOTER -->
     <footer class="footer-institucional">
         <div class="footer-container">
             <div class="footer-info">
                 <p class="portal-nombre">Portal Informativo Alfredo Maneiro</p>
-                <p>&copy; 2026 Portal Informativo Alfredo Maneiro. Todos los derechos reservados.</p>
+                <p>&copy; 2026 Portal Informativo Alfredo Maneiro.</p>
             </div>
         </div>
     </footer>
 
-    <!-- BOTÓN FLOTANTE DE ADMINISTRACIÓN -->
-    <a href="/admin" class="btn-flotante-admin" title="Panel de Administrador" style="position: fixed; bottom: 25px; right: 25px; background: #2563eb; color: #ffffff; width: 55px; height: 55px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 9999; text-decoration: none; transition: transform 0.2s;">
-        ⚙️
-    </a>
+    <a href="/admin" class="btn-flotante-admin" title="Panel de administración" aria-label="Panel de administración">⚙</a>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- SCRIPT DE JAVASCRIPT -->
     <script>
         function navegarSeccion(hash) {
@@ -261,73 +235,118 @@
             if (spanContador) spanContador.textContent = comentarios.length;
         }
 
-        function renderizarNoticias() {
+        function escaparHtml(valor) {
+            return String(valor == null ? '' : valor).replace(/[&<>"']/g, function(caracter) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[caracter];
+            });
+        }
+
+        function urlMultimedia(valor) {
+            try {
+                var url = new URL(valor, window.location.origin);
+                return url.protocol === 'http:' || url.protocol === 'https:' ? url.href : '';
+            } catch (error) {
+                return '';
+            }
+        }
+
+        async function renderizarNoticias() {
             var contenedor = document.getElementById('contenedor-noticias-admin');
             if (!contenedor) return;
 
-            var noticiasAdmin = JSON.parse(localStorage.getItem('portal_noticias')) || [];
+            try {
+                let response = await fetch('/api/publicaciones?seccion=inicio', { cache: 'no-store' });
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                let data = await response.json();
+                var noticiasAdmin = data.success ? data.publicaciones : [];
 
-            if (noticiasAdmin.length === 0) {
-                contenedor.innerHTML = '<p class="mensaje-vacio">No hay publicaciones recientes en este momento.</p>';
-                return;
-            }
-
-            var htmlTotal = '';
-            for (var i = 0; i < noticiasAdmin.length; i++) {
-                var n = noticiasAdmin[i];
-                var tituloLimpio = 'post';
-                if (n.titulo) {
-                    tituloLimpio = n.titulo.replace(/\s+/g, '_');
-                }
-                var postId = n.id;
-                if (!postId) {
-                    postId = tituloLimpio + '_' + n.fecha;
+                if (!noticiasAdmin || noticiasAdmin.length === 0) {
+                    contenedor.innerHTML = '<p class="mensaje-vacio">No hay publicaciones recientes en este momento.</p>';
+                    return;
                 }
 
-                var html = '<div class="post-card">' +
-                    '<div class="post-header">' +
-                        '<span class="post-badge">Publicación</span>' +
-                        '<span class="post-date">' + n.fecha + '</span>' +
-                    '</div>' +
-                    '<h3>' + n.titulo + '</h3>' +
-                    '<p class="post-texto">' + n.texto + '</p>';
-
-                if (n.mediaUrl || n.mediaType) {
-                    let rutaFinal = n.mediaUrl;
-                    if (n.mediaType === 'video' || (rutaFinal && (rutaFinal.endsWith('.mp4') || rutaFinal.endsWith('.mov') || rutaFinal.endsWith('.avi') || rutaFinal.endsWith('.mkv')))) {
-                        html += '<video src="' + rutaFinal + '" controls class="post-media-video" style="width:100%; border-radius:8px; margin-top:10px;"></video>';
-                    } else {
-                        html += '<img src="' + rutaFinal + '" alt="Publicacion" class="post-media-img" style="width:100%; border-radius:8px; margin-top:10px;">';
+                var htmlTotal = '';
+                for (var i = 0; i < noticiasAdmin.length; i++) {
+                    var n = noticiasAdmin[i];
+                    var tituloLimpio = 'post';
+                    if (n.titulo) {
+                        tituloLimpio = n.titulo.replace(/\s+/g, '_');
                     }
-                }
+                    var postId = n.id || (tituloLimpio + '_' + i);
+                    var postIdSeguro = String(postId).replace(/[^a-zA-Z0-9_-]/g, '_');
+                    var tituloHtml = escaparHtml(n.titulo || '');
+                    var textoHtml = escaparHtml(n.texto || '');
+                    var mediaUrl = urlMultimedia(n.mediaUrl);
 
-                html += '<div id="reacciones-' + postId + '" class="reacciones-container"></div>' +
-                        '<div class="seccion-comentarios-post">' +
-                            '<span class="label-comentarios">💬 <span id="num-comentarios-' + postId + '">0</span> comentarios</span>' +
-                            '<div id="lista-comentarios-' + postId + '" class="lista-comentarios"></div>' +
-                            '<div class="form-comentario">' +
-                                '<input type="text" id="input-comentario-' + postId + '" placeholder="Escribe un comentario..." class="input-comentario">' +
-                                '<button onclick="agregarComentario(\'' + postId + '\')" class="btn-comentar">Comentar</button>' +
-                            '</div>' +
+                    var html = '<div class="post-card">' +
+                        '<div class="post-header">' +
+                            '<span class="post-badge">Publicación</span>' +
+                            '<span class="post-date">' + escaparHtml(n.fecha || '') + '</span>' +
                         '</div>' +
-                    '</div>';
-                htmlTotal += html;
+                        '<h3>' + tituloHtml + '</h3>' +
+                        '<p class="post-texto">' + textoHtml + '</p>';
+
+                    if (mediaUrl && n.mediaType === 'video') {
+                        html += '<video src="' + escaparHtml(mediaUrl) + '" controls class="post-media-video" style="width:100%; border-radius:8px; margin-top:10px;"></video>';
+                    } else if (mediaUrl && n.mediaType === 'image') {
+                        html += '<img src="' + escaparHtml(mediaUrl) + '" alt="' + tituloHtml + '" class="post-media-img" style="width:100%; border-radius:8px; margin-top:10px;">';
+                    }
+
+                    html += '<div id="reacciones-' + postIdSeguro + '" class="reacciones-container"></div>' +
+                            '<div class="seccion-comentarios-post">' +
+                                '<span class="label-comentarios">💬 <span id="num-comentarios-' + postIdSeguro + '">0</span> comentarios</span>' +
+                                '<div id="lista-comentarios-' + postIdSeguro + '" class="lista-comentarios"></div>' +
+                                '<div class="form-comentario">' +
+                                    '<input type="text" id="input-comentario-' + postIdSeguro + '" placeholder="Escribe un comentario..." class="input-comentario">' +
+                                    '<button onclick="agregarComentario(\'' + postIdSeguro + '\')" class="btn-comentar">Comentar</button>' +
+                                '</div>' +
+                            '</div>' +
+                        '</div>';
+                    htmlTotal += html;
+                }
+
+                contenedor.innerHTML = htmlTotal;
+
+                for (var j = 0; j < noticiasAdmin.length; j++) {
+                    var nItem = noticiasAdmin[j];
+                    var idItem = nItem.id || ('post_' + j);
+                    var idSeguro = String(idItem).replace(/[^a-zA-Z0-9_-]/g, '_');
+                    renderizarReacciones(idSeguro);
+                    renderizarComentarios(idSeguro);
+                }
+            } catch (error) {
+                console.error('Error al cargar publicaciones:', error);
+                contenedor.innerHTML = '<p class="mensaje-vacio" style="color: red;">Error al conectar con el servidor para cargar las publicaciones.</p>';
             }
+        }
 
-            contenedor.innerHTML = htmlTotal;
+        async function renderizarGaleria(seccion, idContenedor, tipo) {
+            var contenedor = document.getElementById(idContenedor);
+            if (!contenedor) return;
 
-            for (var j = 0; j < noticiasAdmin.length; j++) {
-                var nItem = noticiasAdmin[j];
-                var tituloItemLimpio = 'post';
-                if (nItem.titulo) {
-                    tituloItemLimpio = nItem.titulo.replace(/\s+/g, '_');
+            try {
+                var response = await fetch('/api/publicaciones?seccion=' + encodeURIComponent(seccion), { cache: 'no-store' });
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                var data = await response.json();
+                var publicaciones = data.success ? data.publicaciones : [];
+                if (!publicaciones.length) {
+                    contenedor.innerHTML = '<p class="mensaje-vacio">No hay contenido publicado todavía.</p>';
+                    return;
                 }
-                var pId = nItem.id;
-                if (!pId) {
-                    pId = tituloItemLimpio + '_' + nItem.fecha;
-                }
-                renderizarReacciones(pId);
-                renderizarComentarios(pId);
+
+                contenedor.innerHTML = publicaciones.map(function(publicacion) {
+                    var mediaUrl = urlMultimedia(publicacion.mediaUrl);
+                    if (!mediaUrl) return '';
+                    var titulo = escaparHtml(publicacion.titulo || '');
+                    if (tipo === 'video') {
+                        return '<div class="video-item"><video src="' + escaparHtml(mediaUrl) + '" controls preload="metadata"></video><small>' + titulo + '</small></div>';
+                        } else {
+                        return '<div class="foto-item"><img src="' + escaparHtml(mediaUrl) + '" alt="' + titulo + '"><small>' + titulo + '</small></div>';
+                        }
+                }).join('');
+            } catch (error) {
+                console.error('Error al cargar la galería:', error);
+                contenedor.innerHTML = '<p class="mensaje-vacio">No se pudo cargar el contenido.</p>';
             }
         }
 
@@ -340,8 +359,47 @@
             }, 5000);
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
+        var realtimeActivo = false;
+
+        function actualizarContenidoPublico() {
             renderizarNoticias();
+            renderizarGaleria('fotos', 'galeria-fotos', 'image');
+            renderizarGaleria('videos', 'galeria-videos', 'video');
+        }
+
+        async function iniciarRealtime() {
+            try {
+                var respuesta = await fetch('/api/public-config', { cache: 'no-store' });
+                var config = await respuesta.json();
+                if (!respuesta.ok || !config.realtimeEnabled || !window.supabase) return;
+
+                var clienteRealtime = window.supabase.createClient(
+                    config.supabaseUrl,
+                    config.supabaseAnonKey
+                );
+                clienteRealtime
+                    .channel('publicaciones-en-vivo')
+                    .on('postgres_changes', {
+                        event: '*',
+                        schema: 'public',
+                        table: 'publicaciones'
+                    }, actualizarContenidoPublico)
+                    .subscribe(function(estado) {
+                        realtimeActivo = estado === 'SUBSCRIBED';
+                    });
+            } catch (error) {
+                console.warn('Realtime no está disponible; se usará la actualización periódica.', error);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            actualizarContenidoPublico();
+            iniciarRealtime();
+            window.setInterval(function() {
+                if (document.visibilityState === 'visible' && !realtimeActivo) {
+                    actualizarContenidoPublico();
+                }
+            }, 15000);
         });
     </script>
 </body>

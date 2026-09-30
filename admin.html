@@ -129,14 +129,40 @@
     </div>
 
     <script>
-        function verificarClave() {
-            let ingresada = document.getElementById('input-clave').value.trim();
-            if (ingresada === "Apure47**") {
+        let adminPassword = '';
+
+        function escaparHtmlAdmin(valor) {
+            return String(valor == null ? '' : valor).replace(/[&<>"']/g, function(caracter) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[caracter];
+            });
+        }
+
+        async function verificarClave() {
+            let ingresada = document.getElementById('input-clave').value;
+            let mensajeError = document.getElementById('error-clave');
+            mensajeError.style.display = 'none';
+
+            try {
+                const response = await fetch('/api/admin/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: ingresada })
+                });
+                const result = await response.json();
+                if (!response.ok || !result.success) {
+                    mensajeError.textContent = result.error || 'No se pudo validar el acceso.';
+                    mensajeError.style.display = 'block';
+                    return;
+                }
+
+                adminPassword = ingresada;
+                document.getElementById('input-clave').value = '';
                 document.getElementById('pantalla-login').style.display = 'none';
                 document.getElementById('panel-contenido').style.display = 'block';
                 cargarDatosIniciales();
-            } else {
-                document.getElementById('error-clave').style.display = 'block';
+            } catch (error) {
+                mensajeError.textContent = 'No se pudo conectar con el servidor.';
+                mensajeError.style.display = 'block';
             }
         }
 
@@ -191,48 +217,31 @@
             btn.textContent = "Procesando...";
             btn.disabled = true;
 
-            let mediaUrl = "";
-            let mediaType = "";
-
             try {
+                const formData = new FormData();
+                formData.append('titulo', titulo);
+                formData.append('texto', texto);
+                formData.append('seccion', 'inicio');
                 if (inputArchivo.files && inputArchivo.files[0]) {
-                    const file = inputArchivo.files[0];
-                    const formData = new FormData();
-                    formData.append('file', file);
-
-                    const response = await fetch('/upload', { method: 'POST', body: formData });
-                    const result = await response.json();
-
-                    if (result.success) {
-                        mediaUrl = result.url;
-                        mediaType = file.type.startsWith('video/') ? 'video' : 'image';
-                    } else {
-                        alert("Error al subir archivo: " + result.error);
-                        btn.textContent = original;
-                        btn.disabled = false;
-                        return;
-                    }
+                    formData.append('file', inputArchivo.files[0]);
                 }
 
-                let nuevoPost = {
-                    id: 'post_' + Date.now(),
-                    titulo: titulo || "Actualización",
-                    texto: texto || "",
-                    mediaUrl: mediaUrl,
-                    mediaType: mediaType,
-                    fecha: new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
-                };
-
-                let noticias = JSON.parse(localStorage.getItem('portal_noticias')) || [];
-                noticias.unshift(nuevoPost);
-                localStorage.setItem('portal_noticias', JSON.stringify(noticias));
+                const response = await fetch('/api/publicaciones', {
+                    method: 'POST',
+                    headers: { 'X-Admin-Password': adminPassword },
+                    body: formData
+                });
+                const result = await response.json();
+                if (!response.ok || !result.success) {
+                    throw new Error(result.error || 'No se pudo guardar la publicación.');
+                }
 
                 document.getElementById('admin-titulo').value = "";
                 document.getElementById('admin-texto-inicio').value = "";
                 inputArchivo.value = "";
 
-                alert("¡Publicación enviada a la sección Inicio con éxito!");
-                actualizarListaInicio();
+                alert("¡Publicación guardada en Supabase!");
+                await actualizarListaInicio();
 
             } catch (error) {
                 alert("Error: " + error.message);
@@ -262,28 +271,23 @@
                 const formData = new FormData();
                 formData.append('file', file);
 
-                const response = await fetch('/upload', { method: 'POST', body: formData });
+                formData.append('titulo', nombreVal || 'Archivo sin título');
+                formData.append('texto', '');
+                formData.append('seccion', seccionDestino);
+
+                const response = await fetch('/api/publicaciones', {
+                    method: 'POST',
+                    headers: { 'X-Admin-Password': adminPassword },
+                    body: formData
+                });
                 const result = await response.json();
 
-                if (result.success) {
-                    let elementoNuevo = {
-                        id: 'media_' + Date.now(),
-                        titulo: nombreVal || "Archivo sin título",
-                        url: result.url,
-                        tipo: tipoMedio,
-                        fecha: new Date().toLocaleDateString()
-                    };
-
-                    let keyStorage = seccionDestino === 'fotos' ? 'portal_fotos' : 'portal_videos';
-                    let lista = JSON.parse(localStorage.getItem(keyStorage)) || [];
-                    lista.unshift(elementoNuevo);
-                    localStorage.setItem(keyStorage, JSON.stringify(lista));
-
+                if (response.ok && result.success) {
                     inputArchivo.value = "";
                     document.getElementById(idInputNombre).value = "";
-                    alert("¡Archivo subido y añadido a la sección de " + seccionDestino.toUpperCase() + " correctamente!");
+                    alert("¡Archivo guardado en Supabase y añadido a " + seccionDestino.toUpperCase() + "!");
                 } else {
-                    alert("Error: " + result.error);
+                    throw new Error(result.error || 'No se pudo guardar el archivo.');
                 }
             } catch (error) {
                 alert("Fallo de subida: " + error.message);
@@ -293,32 +297,56 @@
             }
         }
 
-        function actualizarListaInicio() {
+        async function actualizarListaInicio() {
             let contenedor = document.getElementById('lista-admin-inicio');
-            let noticias = JSON.parse(localStorage.getItem('portal_noticias')) || [];
+            contenedor.innerHTML = '<p style="color: #64748b; font-size: 14px;">Cargando publicaciones...</p>';
 
-            if (noticias.length === 0) {
-                contenedor.innerHTML = '<p style="color: #64748b; font-size: 14px;">No hay publicaciones en el inicio.</p>';
-                return;
+            try {
+                const response = await fetch('/api/publicaciones?seccion=inicio', { cache: 'no-store' });
+                const result = await response.json();
+                if (!response.ok || !result.success) {
+                    throw new Error(result.error || 'No se pudieron cargar las publicaciones.');
+                }
+
+                const noticias = result.publicaciones || [];
+                if (noticias.length === 0) {
+                    contenedor.innerHTML = '<p style="color: #64748b; font-size: 14px;">No hay publicaciones en el inicio.</p>';
+                    return;
+                }
+
+                contenedor.innerHTML = noticias.map(function(n) {
+                    return '<div class="item-lista">' +
+                        '<div><strong>' + escaparHtmlAdmin(n.titulo) + '</strong><br><small style="color:#64748b;">' + escaparHtmlAdmin(n.fecha) + '</small></div>' +
+                        '<button class="btn-eliminar" type="button" data-id="' + escaparHtmlAdmin(n.id) + '">Eliminar</button>' +
+                    '</div>';
+                }).join('');
+
+                contenedor.querySelectorAll('.btn-eliminar[data-id]').forEach(function(boton) {
+                    boton.addEventListener('click', function() {
+                        eliminarPost(boton.dataset.id);
+                    });
+                });
+            } catch (error) {
+                contenedor.innerHTML = '<p style="color: #b91c1c; font-size: 14px;">' + escaparHtmlAdmin(error.message) + '</p>';
             }
-
-            let html = '';
-            noticias.forEach(function(n, index) {
-                html += '<div class="item-lista">' +
-                    '<div><strong>' + n.titulo + '</strong><br><small style="color:#64748b;">' + n.fecha + '</small></div>' +
-                    '<button class="btn-eliminar" onclick="eliminarPost(' + index + ')">Eliminar</button>' +
-                '</div>';
-            });
-            contenedor.innerHTML = html;
         }
 
         // Eliminar publicación del inicio
-        function eliminarPost(index) {
+        async function eliminarPost(publicacionId) {
             if (confirm("¿Estás seguro de eliminar esta publicación?")) {
-                let noticias = JSON.parse(localStorage.getItem('portal_noticias')) || [];
-                noticias.splice(index, 1);
-                localStorage.setItem('portal_noticias', JSON.stringify(noticias));
-                actualizarListaInicio();
+                try {
+                    const response = await fetch('/api/publicaciones/' + encodeURIComponent(publicacionId), {
+                        method: 'DELETE',
+                        headers: { 'X-Admin-Password': adminPassword }
+                    });
+                    const result = await response.json();
+                    if (!response.ok || !result.success) {
+                        throw new Error(result.error || 'No se pudo eliminar la publicación.');
+                    }
+                    await actualizarListaInicio();
+                } catch (error) {
+                    alert(error.message);
+                }
             }
         }
     </script>
