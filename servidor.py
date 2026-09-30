@@ -206,7 +206,8 @@ def pagina_principal():
 
 @app.route("/admin")
 def panel_admin():
-    return send_from_directory(BASE_DIR, "admin.html")
+    # Usamos una ruta absoluta directa para asegurar que encuentre el admin.html
+    return send_from_directory(os.path.join(BASE_DIR), "admin.html")
 
 
 # ============================================================
