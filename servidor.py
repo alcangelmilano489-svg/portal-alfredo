@@ -4,8 +4,10 @@ import uuid
 from datetime import datetime, timezone
 from functools import wraps
 from pathlib import Path
+from urllib.parse import quote
 
 from flask import Flask, jsonify, request, send_from_directory
+import httpx
 from supabase import create_client
 from werkzeug.exceptions import RequestEntityTooLarge
 from werkzeug.utils import secure_filename
@@ -71,6 +73,34 @@ ALLOWED_MEDIA = {
 
 def respuesta_error(mensaje, estado):
     return jsonify({"success": False, "error": mensaje}), estado
+
+
+def subir_archivo_supabase(bucket, path, nombre, contenido, content_type):
+    if not SUPABASE_URL:
+        raise RuntimeError("Falta configurar SUPABASE_URL en Render.")
+    if not SUPABASE_WRITE_KEY:
+        raise RuntimeError("Falta una clave Supabase con permisos de escritura.")
+
+    ruta = "/".join(quote(parte, safe="") for parte in path.split("/"))
+    bucket_url = quote(bucket, safe="")
+    response = httpx.post(
+        f"{SUPABASE_URL.rstrip('/')}/storage/v1/object/{bucket_url}/{ruta}",
+        headers={
+            "apikey": SUPABASE_WRITE_KEY,
+            "Authorization": f"Bearer {SUPABASE_WRITE_KEY}",
+            "x-upsert": "false",
+        },
+        files={"file": (nombre, contenido, content_type)},
+        timeout=120.0,
+    )
+    if not response.is_success:
+        try:
+            detalle = response.json()
+        except ValueError:
+            detalle = response.text[:1000]
+        raise RuntimeError(
+            f"Supabase Storage respondió HTTP {response.status_code}: {detalle}"
+        )
 
 
 @app.errorhandler(RequestEntityTooLarge)
@@ -208,10 +238,12 @@ def crear_publicacion():
 
             media_path = f"publicaciones/{uuid.uuid4().hex}_{nombre}"
             almacenamiento = cliente_admin.storage.from_(SUPABASE_STORAGE_BUCKET)
-            almacenamiento.upload(
+            subir_archivo_supabase(
+                SUPABASE_STORAGE_BUCKET,
                 media_path,
+                nombre,
                 contenido,
-                {"content-type": content_type, "upsert": "false"},
+                content_type,
             )
             media_url = almacenamiento.get_public_url(media_path)
 
