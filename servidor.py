@@ -275,6 +275,7 @@ def crear_publicacion():
             media_url = almacenamiento.get_public_url(media_path)
 
         publicacion = {
+            "id": str(uuid.uuid4()),
             "fecha": datetime.now(timezone.utc).isoformat(),
             "titulo": titulo or "Actualización",
             "texto": texto,
