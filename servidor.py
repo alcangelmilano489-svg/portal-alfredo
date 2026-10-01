@@ -4,6 +4,8 @@ import uuid
 from datetime import datetime, timezone
 from functools import wraps
 from pathlib import Path
+from collections.abc import Sequence
+from typing import Any
 from urllib.parse import quote
 
 from flask import Flask, jsonify, request, send_from_directory
@@ -73,6 +75,34 @@ def respuesta_error(mensaje, estado):
     return jsonify({"success": False, "error": mensaje}), estado
 
 
+def encabezados_supabase_admin():
+    if not SUPABASE_WRITE_KEY:
+        raise RuntimeError("Falta una clave Supabase con permisos de escritura.")
+    headers = {"apikey": SUPABASE_WRITE_KEY}
+    if not SUPABASE_WRITE_KEY.startswith("sb_secret_"):
+        headers["Authorization"] = f"Bearer {SUPABASE_WRITE_KEY}"
+    return headers
+
+
+def solicitar_supabase_admin(metodo, recurso, **kwargs) -> list[dict[str, Any]]:
+    headers = encabezados_supabase_admin()
+    headers.update({"Content-Type": "application/json", "Prefer": "return=representation"})
+    response = httpx.request(
+        metodo,
+        f"{SUPABASE_URL.rstrip('/')}/rest/v1/{recurso}",
+        headers=headers,
+        timeout=30.0,
+        **kwargs,
+    )
+    if not response.is_success:
+        try:
+            detalle = response.json()
+        except ValueError:
+            detalle = response.text[:1000]
+        raise RuntimeError(f"Supabase respondió HTTP {response.status_code}: {detalle}")
+    return response.json()
+
+
 def subir_archivo_supabase(bucket, path, nombre, contenido, content_type):
     if not SUPABASE_URL:
         raise RuntimeError("Falta configurar SUPABASE_URL en Render.")
@@ -81,12 +111,8 @@ def subir_archivo_supabase(bucket, path, nombre, contenido, content_type):
 
     ruta = "/".join(quote(parte, safe="") for parte in path.split("/"))
     bucket_url = quote(bucket, safe="")
-    headers = {
-        "apikey": SUPABASE_WRITE_KEY,
-        "x-upsert": "false",
-    }
-    if not SUPABASE_WRITE_KEY.startswith("sb_secret_"):
-        headers["Authorization"] = f"Bearer {SUPABASE_WRITE_KEY}"
+    headers = encabezados_supabase_admin()
+    headers["x-upsert"] = "false"
 
     response = httpx.post(
         f"{SUPABASE_URL.rstrip('/')}/storage/v1/object/{bucket_url}/{ruta}",
@@ -257,7 +283,12 @@ def crear_publicacion():
             "mediaPath": media_path,
             "seccion": seccion,
         }
-        creada = cliente_admin.table("publicaciones").insert(publicacion).execute().data
+        if SUPABASE_WRITE_KEY and SUPABASE_WRITE_KEY.startswith("sb_secret_"):
+            creada = solicitar_supabase_admin(
+                "POST", "publicaciones", json=publicacion
+            )
+        else:
+            creada = cliente_admin.table("publicaciones").insert(publicacion).execute().data
         return jsonify({"success": True, "publicacion": creada[0] if creada else publicacion}), 201
     except Exception as error:
         if media_path:
@@ -281,18 +312,27 @@ def eliminar_publicacion(publicacion_id):
         )
 
     try:
-        resultado = (
-            cliente_admin.table("publicaciones")
-            .delete()
-            .eq("id", publicacion_id)
-            .execute()
-        )
-        if not resultado.data:
+        publicaciones: Sequence[Any]
+        if SUPABASE_WRITE_KEY and SUPABASE_WRITE_KEY.startswith("sb_secret_"):
+            publicaciones = solicitar_supabase_admin(
+                "DELETE",
+                "publicaciones",
+                params={"id": f"eq.{publicacion_id}"},
+            )
+        else:
+            publicaciones = (
+                cliente_admin.table("publicaciones")
+                .delete()
+                .eq("id", publicacion_id)
+                .execute()
+                .data
+            )
+        if not publicaciones:
             return respuesta_error("Publicación no encontrada.", 404)
 
         media_path = None
-        if resultado.data and isinstance(resultado.data[0], dict):
-            valor_media_path = resultado.data[0].get("mediaPath")
+        if isinstance(publicaciones[0], dict):
+            valor_media_path = publicaciones[0].get("mediaPath")
             if isinstance(valor_media_path, str):
                 media_path = valor_media_path
         if media_path:
