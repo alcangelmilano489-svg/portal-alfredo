@@ -327,20 +327,12 @@
             if (!contenedor) return;
 
             try {
-                let responses = await Promise.all([
-                    fetch('/api/publicaciones?seccion=inicio', { cache: 'no-store' }),
-                    fetch('/api/publicaciones?seccion=videos', { cache: 'no-store' })
-                ]);
-                if (responses.some(function(response) { return !response.ok; })) {
-                    throw new Error('No se pudieron cargar todas las publicaciones.');
+                var response = await fetch('/api/publicaciones?seccion=inicio', { cache: 'no-store' });
+                if (!response.ok) {
+                    throw new Error('No se pudieron cargar las publicaciones.');
                 }
-                let resultados = await Promise.all(responses.map(function(response) {
-                    return response.json();
-                }));
-                var noticiasAdmin = [
-                    ...(resultados[0].success ? resultados[0].publicaciones : []),
-                    ...(resultados[1].success ? resultados[1].publicaciones : [])
-                ].filter(function(publicacion) {
+                var resultado = await response.json();
+                var noticiasAdmin = (resultado.success ? resultado.publicaciones : []).filter(function(publicacion) {
                     return Boolean(
                         (publicacion.titulo && publicacion.titulo.trim()) ||
                         (publicacion.texto && publicacion.texto.trim()) ||
