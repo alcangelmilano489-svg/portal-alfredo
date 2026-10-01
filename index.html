@@ -98,6 +98,20 @@
             <div id="contenedor-noticias-admin">
                 <p class="mensaje-vacio">Cargando publicaciones...</p>
             </div>
+            <section class="suscripcion-seccion" aria-labelledby="titulo-suscripcion">
+                <div class="suscripcion-texto">
+                    <h3 id="titulo-suscripcion">Recibe las nuevas publicaciones</h3>
+                    <p>Suscriptores: <strong id="total-suscriptores">...</strong></p>
+                </div>
+                <form id="form-suscripcion" class="form-suscripcion">
+                    <label class="campo-oculto" for="sitio-web-suscripcion">Deja este campo vacío</label>
+                    <input id="sitio-web-suscripcion" name="sitio-web" type="text" tabindex="-1" autocomplete="off" class="campo-oculto" aria-hidden="true">
+                    <label class="campo-oculto" for="email-suscripcion">Correo electrónico</label>
+                    <input id="email-suscripcion" name="email" type="email" placeholder="Tu correo electrónico" autocomplete="email" maxlength="254" required>
+                    <button type="submit" class="btn-suscribir">Suscribirme</button>
+                </form>
+                <p id="estado-suscripcion" class="estado-suscripcion" aria-live="polite"></p>
+            </section>
         </section>
     </main>
 
@@ -195,47 +209,101 @@
             }).join('');
         }
 
-        function cargarComentarios(postId) {
-            return JSON.parse(localStorage.getItem('post_' + postId + '_comentarios') || '[]');
-        }
-
-        function guardarComentarios(postId, comentarios) {
-            localStorage.setItem('post_' + postId + '_comentarios', JSON.stringify(comentarios));
-        }
-
-        function agregarComentario(postId) {
+        async function agregarComentario(postId) {
             var input = document.getElementById('input-comentario-' + postId);
             var texto = input.value.trim();
-            if (texto === "") {
-                alert("Por favor escribe un comentario antes de publicar.");
+            if (!texto || texto.length > 1000) {
+                alert("Escribe un comentario de hasta 1000 caracteres.");
                 return;
             }
-            var comentarios = cargarComentarios(postId);
-            comentarios.push({
-                texto: texto,
-                fecha: new Date().toLocaleDateString(),
-                hora: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
-            });
-            guardarComentarios(postId, comentarios);
-            input.value = "";
-            renderizarComentarios(postId);
+
+            try {
+                var response = await fetch('/api/publicaciones/' + encodeURIComponent(postId) + '/comentarios', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ texto: texto })
+                });
+                var result = await response.json();
+                if (!response.ok || !result.success) {
+                    throw new Error(result.error || 'No se pudo guardar el comentario.');
+                }
+                input.value = '';
+                await renderizarComentarios(postId);
+            } catch (error) {
+                alert(error.message || 'No se pudo guardar el comentario.');
+            }
         }
 
-        function renderizarComentarios(postId) {
+        async function renderizarComentarios(postId) {
             var lista = document.getElementById('lista-comentarios-' + postId);
             var spanContador = document.getElementById('num-comentarios-' + postId);
             if (!lista) return;
 
-            var comentarios = cargarComentarios(postId);
-            lista.innerHTML = comentarios.map(function(c) {
-                return '<div class="comentario-item">' +
-                    '<strong>Visitante:</strong>' +
-                    '<p style="margin: 3px 0 0 0; color: #334155; font-size: 13px;">' + c.texto + '</p>' +
-                    '<small>' + c.fecha + ' ' + c.hora + '</small>' +
-                '</div>';
-            }).join('');
+            try {
+                var response = await fetch('/api/publicaciones/' + encodeURIComponent(postId) + '/comentarios', { cache: 'no-store' });
+                var result = await response.json();
+                if (!response.ok || !result.success) throw new Error(result.error || 'Error al cargar comentarios.');
+                var comentarios = result.comentarios || [];
+                lista.innerHTML = comentarios.map(function(c) {
+                    var fecha = c.created_at ? new Date(c.created_at).toLocaleString() : '';
+                    return '<div class="comentario-item">' +
+                        '<strong>' + escaparHtml(c.nombre || 'Visitante') + '</strong>' +
+                        '<p>' + escaparHtml(c.texto) + '</p>' +
+                        '<small>' + escaparHtml(fecha) + '</small>' +
+                    '</div>';
+                }).join('');
+                if (spanContador) spanContador.textContent = comentarios.length;
+            } catch (error) {
+                lista.innerHTML = '<p class="estado-comentarios">No se pudieron cargar los comentarios.</p>';
+            }
+        }
 
-            if (spanContador) spanContador.textContent = comentarios.length;
+        async function actualizarTotalSuscriptores() {
+            var total = document.getElementById('total-suscriptores');
+            try {
+                var response = await fetch('/api/suscripciones/count', { cache: 'no-store' });
+                var result = await response.json();
+                if (!response.ok || !result.success) throw new Error('No se pudo cargar el total.');
+                total.textContent = Number(result.count).toLocaleString();
+            } catch (error) {
+                total.textContent = '—';
+            }
+        }
+
+        function iniciarSuscripciones() {
+            var form = document.getElementById('form-suscripcion');
+            if (!form) return;
+            actualizarTotalSuscriptores();
+
+            form.addEventListener('submit', async function(event) {
+                event.preventDefault();
+                var email = document.getElementById('email-suscripcion');
+                var trampa = document.getElementById('sitio-web-suscripcion');
+                var estado = document.getElementById('estado-suscripcion');
+                var boton = form.querySelector('button[type="submit"]');
+                if (trampa.value) return;
+                boton.disabled = true;
+                estado.textContent = 'Procesando suscripción...';
+
+                try {
+                    var response = await fetch('/api/suscripciones', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: email.value })
+                    });
+                    var result = await response.json();
+                    if (!response.ok || !result.success) throw new Error(result.error || 'No se pudo completar la suscripción.');
+                    estado.textContent = result.alreadySubscribed
+                        ? 'Este correo ya está suscrito.'
+                        : '¡Suscripción completada!';
+                    email.value = '';
+                    await actualizarTotalSuscriptores();
+                } catch (error) {
+                    estado.textContent = error.message || 'No se pudo completar la suscripción.';
+                } finally {
+                    boton.disabled = false;
+                }
+            });
         }
 
         function escaparHtml(valor) {
@@ -416,6 +484,7 @@
 
         document.addEventListener('DOMContentLoaded', function() {
             actualizarContenidoPublico();
+            iniciarSuscripciones();
             iniciarRealtime();
             window.setInterval(function() {
                 if (document.visibilityState === 'visible' && !realtimeActivo) {

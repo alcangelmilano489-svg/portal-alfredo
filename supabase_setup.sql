@@ -41,6 +41,42 @@ create policy "Publicaciones visibles para visitantes"
 create index if not exists publicaciones_seccion_fecha_idx
     on public.publicaciones (seccion, fecha desc);
 
+create table if not exists public.comentarios (
+    id uuid primary key default gen_random_uuid(),
+    publicacion_id text not null references public.publicaciones(id) on delete cascade,
+    nombre text not null default 'Visitante' check (char_length(nombre) <= 80),
+    texto text not null check (char_length(texto) between 1 and 1000),
+    created_at timestamptz not null default now()
+);
+
+alter table public.comentarios enable row level security;
+
+drop policy if exists "Comentarios visibles para visitantes"
+    on public.comentarios;
+create policy "Comentarios visibles para visitantes"
+    on public.comentarios
+    for select
+    to anon, authenticated
+    using (true);
+
+grant select on public.comentarios to anon, authenticated;
+grant all on public.comentarios to service_role;
+
+create index if not exists comentarios_publicacion_fecha_idx
+    on public.comentarios (publicacion_id, created_at);
+
+create table if not exists public.suscriptores (
+    id uuid primary key default gen_random_uuid(),
+    email text not null unique check (char_length(email) <= 254),
+    created_at timestamptz not null default now()
+);
+
+alter table public.suscriptores enable row level security;
+grant all on public.suscriptores to service_role;
+
+create index if not exists suscriptores_created_at_idx
+    on public.suscriptores (created_at);
+
 insert into storage.buckets (id, name, public)
 values ('media', 'media', true)
 on conflict (id) do update set public = true;

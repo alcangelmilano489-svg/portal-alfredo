@@ -322,6 +322,71 @@ body {
     margin-bottom: 20px;
 }
 
+.suscripcion-seccion {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 1fr);
+    gap: 12px 24px;
+    align-items: center;
+    margin-top: 28px;
+    padding-top: 22px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.suscripcion-texto h3 {
+    color: #0b1f4d;
+    font-size: 17px;
+}
+
+.suscripcion-texto p,
+.estado-suscripcion {
+    color: #64748b;
+    font-size: 13px;
+}
+
+.form-suscripcion {
+    display: flex;
+    gap: 8px;
+}
+
+.form-suscripcion input[type="email"] {
+    min-width: 0;
+    flex: 1;
+    padding: 10px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font: inherit;
+}
+
+.btn-suscribir {
+    padding: 10px 14px;
+    border: 0;
+    border-radius: 6px;
+    background: #0f766e;
+    color: #fff;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-suscribir:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
+.estado-suscripcion {
+    grid-column: 1 / -1;
+    min-height: 1.4em;
+}
+
+.campo-oculto {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+}
+
 .mensaje-vacio {
     color: #64748b;
     text-align: center;
@@ -447,6 +512,24 @@ body {
     margin-bottom: 8px;
     border-radius: 4px;
     font-size: 14px;
+}
+
+.comentario-item p {
+    margin: 3px 0 0;
+    color: #334155;
+    font-size: 13px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.comentario-item small {
+    color: #64748b;
+    font-size: 11px;
+}
+
+.estado-comentarios {
+    color: #64748b;
+    font-size: 13px;
 }
 
 .comentario-item strong {
@@ -650,6 +733,14 @@ body {
 
     .post-card {
         padding: 15px;
+    }
+
+    .suscripcion-seccion {
+        grid-template-columns: 1fr;
+    }
+
+    .form-suscripcion {
+        flex-direction: column;
     }
 
     .footer-institucional {

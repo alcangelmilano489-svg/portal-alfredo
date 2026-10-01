@@ -1,6 +1,7 @@
 import hmac
 import os
 import uuid
+import re
 from datetime import datetime, timezone
 from functools import wraps
 from pathlib import Path
@@ -84,9 +85,11 @@ def encabezados_supabase_admin():
     return headers
 
 
-def solicitar_supabase_admin(metodo, recurso, **kwargs) -> list[dict[str, Any]]:
+def solicitar_supabase_admin(
+    metodo, recurso, prefer="return=representation", **kwargs
+) -> list[dict[str, Any]]:
     headers = encabezados_supabase_admin()
-    headers.update({"Content-Type": "application/json", "Prefer": "return=representation"})
+    headers.update({"Content-Type": "application/json", "Prefer": prefer})
     response = httpx.request(
         metodo,
         f"{SUPABASE_URL.rstrip('/')}/rest/v1/{recurso}",
@@ -101,6 +104,24 @@ def solicitar_supabase_admin(metodo, recurso, **kwargs) -> list[dict[str, Any]]:
             detalle = response.text[:1000]
         raise RuntimeError(f"Supabase respondió HTTP {response.status_code}: {detalle}")
     return response.json()
+
+
+def contar_suscriptores():
+    headers = encabezados_supabase_admin()
+    headers["Prefer"] = "count=exact"
+    response = httpx.get(
+        f"{SUPABASE_URL.rstrip('/')}/rest/v1/suscriptores",
+        params={"select": "id"},
+        headers={**headers, "Range": "0-0"},
+        timeout=15.0,
+    )
+    if not response.is_success:
+        raise RuntimeError("No se pudo consultar el total de suscriptores.")
+
+    coincidencia = re.search(r"/(\d+)$", response.headers.get("content-range", ""))
+    if not coincidencia:
+        raise RuntimeError("Supabase no devolvió el total de suscriptores.")
+    return int(coincidencia.group(1))
 
 
 def subir_archivo_supabase(bucket, path, nombre, contenido, content_type):
@@ -216,6 +237,130 @@ def obtener_publicaciones():
     except Exception as error:
         app.logger.exception("No se pudieron consultar las publicaciones")
         return respuesta_error(str(error), 500)
+
+
+def uuid_publicacion_valido(publicacion_id):
+    try:
+        return str(uuid.UUID(publicacion_id))
+    except (AttributeError, TypeError, ValueError):
+        return None
+
+
+@app.route("/api/publicaciones/<publicacion_id>/comentarios", methods=["GET"])
+def obtener_comentarios(publicacion_id):
+    if supabase is None:
+        return respuesta_error(
+            SUPABASE_CONFIG_ERROR or "Supabase no está configurado.", 503
+        )
+
+    publicacion_uuid = uuid_publicacion_valido(publicacion_id)
+    if publicacion_uuid is None:
+        return respuesta_error("Publicación no válida.", 400)
+
+    try:
+        comentarios = (
+            supabase.table("comentarios")
+            .select("id,nombre,texto,created_at")
+            .eq("publicacion_id", publicacion_uuid)
+            .order("created_at", desc=True)
+            .limit(100)
+            .execute()
+            .data
+        )
+        return jsonify({"success": True, "comentarios": comentarios})
+    except Exception:
+        app.logger.exception("No se pudieron consultar los comentarios")
+        return respuesta_error("No se pudieron cargar los comentarios.", 500)
+
+
+@app.route("/api/publicaciones/<publicacion_id>/comentarios", methods=["POST"])
+def crear_comentario(publicacion_id):
+    if supabase_admin is None:
+        return respuesta_error(
+            SUPABASE_CONFIG_ERROR
+            or "Configura SUPABASE_SERVICE_ROLE_KEY para guardar comentarios.",
+            503,
+        )
+
+    publicacion_uuid = uuid_publicacion_valido(publicacion_id)
+    if publicacion_uuid is None:
+        return respuesta_error("Publicación no válida.", 400)
+
+    datos = request.get_json(silent=True) or {}
+    texto = datos.get("texto", "")
+    nombre = datos.get("nombre", "Visitante")
+    if not isinstance(texto, str) or not texto.strip() or len(texto.strip()) > 1000:
+        return respuesta_error("El comentario debe tener entre 1 y 1000 caracteres.", 400)
+    if not isinstance(nombre, str) or len(nombre.strip()) > 80:
+        return respuesta_error("El nombre no puede superar 80 caracteres.", 400)
+
+    comentario = {
+        "publicacion_id": publicacion_uuid,
+        "nombre": nombre.strip() or "Visitante",
+        "texto": texto.strip(),
+    }
+    try:
+        if SUPABASE_WRITE_KEY and SUPABASE_WRITE_KEY.startswith("sb_secret_"):
+            guardados = solicitar_supabase_admin(
+                "POST", "comentarios", json=comentario
+            )
+        else:
+            guardados = (
+                supabase_admin.table("comentarios")
+                .insert(comentario)
+                .execute()
+                .data
+            )
+        return jsonify({"success": True, "comentario": guardados[0] if guardados else comentario}), 201
+    except Exception:
+        app.logger.exception("No se pudo guardar el comentario")
+        return respuesta_error("No se pudo guardar el comentario.", 500)
+
+
+@app.route("/api/suscripciones/count", methods=["GET"])
+def obtener_total_suscriptores():
+    if supabase_admin is None:
+        return respuesta_error(
+            SUPABASE_CONFIG_ERROR
+            or "Configura SUPABASE_SERVICE_ROLE_KEY para consultar suscripciones.",
+            503,
+        )
+    try:
+        return jsonify({"success": True, "count": contar_suscriptores()})
+    except Exception:
+        app.logger.exception("No se pudo consultar el total de suscriptores")
+        return respuesta_error("No se pudo consultar el total de suscriptores.", 500)
+
+
+@app.route("/api/suscripciones", methods=["POST"])
+def crear_suscripcion():
+    if supabase_admin is None:
+        return respuesta_error(
+            SUPABASE_CONFIG_ERROR
+            or "Configura SUPABASE_SERVICE_ROLE_KEY para guardar suscripciones.",
+            503,
+        )
+
+    datos = request.get_json(silent=True) or {}
+    correo = datos.get("email", "")
+    if not isinstance(correo, str):
+        return respuesta_error("Escribe un correo electrónico válido.", 400)
+    correo = correo.strip().lower()
+    if len(correo) > 254 or not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", correo):
+        return respuesta_error("Escribe un correo electrónico válido.", 400)
+
+    try:
+        creada = solicitar_supabase_admin(
+            "POST",
+            "suscriptores",
+            params={"on_conflict": "email"},
+            json={"email": correo},
+            prefer="resolution=ignore-duplicates,return=representation",
+        )
+        return jsonify({"success": True, "alreadySubscribed": not bool(creada)}), 200
+    except Exception:
+        app.logger.exception("No se pudo guardar la suscripción")
+        return respuesta_error("No se pudo completar la suscripción.", 500)
 
 
 @app.route("/api/publicaciones", methods=["POST"])
