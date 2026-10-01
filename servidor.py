@@ -20,14 +20,11 @@ SUPABASE_WRITE_KEY = (
 )
 SUPABASE_READ_KEY = SUPABASE_ANON_KEY or SUPABASE_WRITE_KEY
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
-if (
-    not SUPABASE_URL
-    or not SUPABASE_READ_KEY
-    or not ADMIN_PASSWORD
-):
+if not SUPABASE_URL:
+    raise RuntimeError("Missing required environment variable: SUPABASE_URL")
+if not SUPABASE_READ_KEY:
     raise RuntimeError(
-        "SUPABASE_URL, SUPABASE_ANON_KEY or SUPABASE_KEY, and ADMIN_PASSWORD "
-        "must be configured"
+        "Set SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, or SUPABASE_KEY"
     )
 
 SUPABASE_STORAGE_BUCKET = os.environ.get("SUPABASE_STORAGE_BUCKET", "media")
