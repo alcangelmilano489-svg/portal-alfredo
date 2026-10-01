@@ -692,7 +692,40 @@ body {
     color: #1e3a8a;
 }
 
+.btn-flotante-admin {
+    position: fixed;
+    right: 25px;
+    bottom: 25px;
+    z-index: 9999;
+    display: flex;
+    width: 55px;
+    height: 55px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: #2563eb;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    font-size: 24px;
+    line-height: 1;
+    text-decoration: none;
+    transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.btn-flotante-admin:hover,
+.btn-flotante-admin:focus-visible {
+    background: #1d4ed8;
+    transform: translateY(-2px);
+}
+
 @media (max-width: 600px) {
+    .btn-flotante-admin {
+        right: 16px;
+        bottom: 16px;
+        width: 48px;
+        height: 48px;
+    }
+
     .admin-link-oculto {
         bottom: 15px;
         right: 15px;

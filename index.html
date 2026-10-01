@@ -268,7 +268,13 @@
                 var noticiasAdmin = [
                     ...(resultados[0].success ? resultados[0].publicaciones : []),
                     ...(resultados[1].success ? resultados[1].publicaciones : [])
-                ].sort(function(a, b) {
+                ].filter(function(publicacion) {
+                    return Boolean(
+                        (publicacion.titulo && publicacion.titulo.trim()) ||
+                        (publicacion.texto && publicacion.texto.trim()) ||
+                        publicacion.mediaUrl
+                    );
+                }).sort(function(a, b) {
                     return new Date(b.fecha).getTime() - new Date(a.fecha).getTime();
                 });
 
@@ -289,17 +295,18 @@
                     var tituloHtml = escaparHtml(n.titulo || '');
                     var textoHtml = escaparHtml(n.texto || '');
                     var mediaUrl = urlMultimedia(n.mediaUrl);
+                    var esVideo = n.mediaType === 'video' || /\.(mp4|m4v|mov|webm)(?:$|[?#])/i.test(mediaUrl);
 
                     var html = '<div class="post-card">' +
                         '<div class="post-header">' +
-                            '<span class="post-badge">' + (n.mediaType === 'video' ? 'Video' : 'Publicación') + '</span>' +
+                            '<span class="post-badge">' + (esVideo ? 'Video' : 'Publicación') + '</span>' +
                             '<span class="post-date">' + escaparHtml(n.fecha || '') + '</span>' +
                         '</div>' +
                         '<h3>' + tituloHtml + '</h3>' +
                         '<p class="post-texto">' + textoHtml + '</p>';
 
-                    if (mediaUrl && n.mediaType === 'video') {
-                        html += '<video src="' + escaparHtml(mediaUrl) + '" controls class="post-media-video" style="width:100%; border-radius:8px; margin-top:10px;"></video>';
+                    if (mediaUrl && esVideo) {
+                        html += '<video src="' + escaparHtml(mediaUrl) + '" controls playsinline preload="metadata" class="post-media-video" style="width:100%; border-radius:8px; margin-top:10px;"></video>';
                     } else if (mediaUrl && n.mediaType === 'image') {
                         html += '<img src="' + escaparHtml(mediaUrl) + '" alt="' + tituloHtml + '" class="post-media-img" style="width:100%; border-radius:8px; margin-top:10px;">';
                     }
