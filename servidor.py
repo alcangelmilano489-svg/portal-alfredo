@@ -1,4 +1,6 @@
+import base64
 import hmac
+import json
 import os
 import uuid
 from datetime import datetime, timezone
@@ -13,12 +15,38 @@ from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 
+
+def es_clave_privilegiada(clave):
+    if clave.startswith("sb_secret_"):
+        return True
+
+    segmentos = clave.split(".")
+    if len(segmentos) != 3:
+        return False
+
+    try:
+        payload = segmentos[1]
+        payload += "=" * (-len(payload) % 4)
+        claims = json.loads(base64.urlsafe_b64decode(payload))
+    except (ValueError, UnicodeDecodeError):
+        return False
+
+    return isinstance(claims, dict) and claims.get("role") == "service_role"
+
+
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY")
-SUPABASE_WRITE_KEY = (
-    os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or os.environ.get("SUPABASE_KEY")
+SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
+SUPABASE_WRITE_KEY = next(
+    (
+        clave
+        for clave in (SUPABASE_SERVICE_ROLE_KEY, SUPABASE_KEY)
+        if clave and es_clave_privilegiada(clave)
+    ),
+    None,
 )
-SUPABASE_READ_KEY = SUPABASE_ANON_KEY or SUPABASE_WRITE_KEY
+SUPABASE_READ_KEY = SUPABASE_ANON_KEY or SUPABASE_KEY or SUPABASE_SERVICE_ROLE_KEY
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
 if not SUPABASE_URL:
     raise RuntimeError("Missing required environment variable: SUPABASE_URL")
@@ -76,7 +104,7 @@ def requiere_admin(funcion):
             return respuesta_error("El panel requiere configurar ADMIN_PASSWORD.", 503)
         if supabase_admin is None:
             return respuesta_error(
-                "Configura SUPABASE_SERVICE_ROLE_KEY o SUPABASE_KEY con permisos de escritura.",
+                "La subida requiere SUPABASE_SERVICE_ROLE_KEY o SUPABASE_KEY con rol service_role; una clave anon no permite escribir en Storage.",
                 503,
             )
 
@@ -152,7 +180,7 @@ def crear_publicacion():
     cliente_admin = supabase_admin
     if cliente_admin is None:
         return respuesta_error(
-            "Configura SUPABASE_SERVICE_ROLE_KEY o SUPABASE_KEY con permisos de escritura.",
+            "La subida requiere SUPABASE_SERVICE_ROLE_KEY o SUPABASE_KEY con rol service_role; una clave anon no permite escribir en Storage.",
             503,
         )
 
@@ -226,7 +254,7 @@ def eliminar_publicacion(publicacion_id):
     cliente_admin = supabase_admin
     if cliente_admin is None:
         return respuesta_error(
-            "Configura SUPABASE_SERVICE_ROLE_KEY o SUPABASE_KEY con permisos de escritura.",
+            "La subida requiere SUPABASE_SERVICE_ROLE_KEY o SUPABASE_KEY con rol service_role; una clave anon no permite escribir en Storage.",
             503,
         )
 
