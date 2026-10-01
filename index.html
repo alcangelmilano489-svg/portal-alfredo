@@ -458,6 +458,15 @@
             renderizarGaleria('videos', 'galeria-videos', 'video');
         }
 
+        function actualizarComentariosPublicos() {
+            document.querySelectorAll('.lista-comentarios[id]').forEach(function(lista) {
+                var prefijo = 'lista-comentarios-';
+                if (lista.id.indexOf(prefijo) === 0) {
+                    renderizarComentarios(lista.id.slice(prefijo.length));
+                }
+            });
+        }
+
         async function iniciarRealtime() {
             try {
                 var respuesta = await fetch('/api/public-config', { cache: 'no-store' });
@@ -475,6 +484,11 @@
                         schema: 'public',
                         table: 'publicaciones'
                     }, actualizarContenidoPublico)
+                    .on('postgres_changes', {
+                        event: '*',
+                        schema: 'public',
+                        table: 'comentarios'
+                    }, actualizarComentariosPublicos)
                     .subscribe(function(estado) {
                         realtimeActivo = estado === 'SUBSCRIBED';
                     });
