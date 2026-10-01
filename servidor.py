@@ -15,7 +15,9 @@ from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 
-SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_URL = (os.environ.get("SUPABASE_URL") or "").strip().rstrip("/")
+if SUPABASE_URL.endswith("/rest/v1"):
+    SUPABASE_URL = SUPABASE_URL[:-len("/rest/v1")]
 SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY")
 SUPABASE_WRITE_KEY = (
     os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or os.environ.get("SUPABASE_KEY")
