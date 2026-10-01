@@ -19,10 +19,8 @@ SUPABASE_URL = (os.environ.get("SUPABASE_URL") or "").strip().rstrip("/")
 if SUPABASE_URL.endswith("/rest/v1"):
     SUPABASE_URL = SUPABASE_URL[:-len("/rest/v1")]
 SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY")
-SUPABASE_WRITE_KEY = (
-    os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or os.environ.get("SUPABASE_KEY")
-)
-SUPABASE_READ_KEY = SUPABASE_ANON_KEY or SUPABASE_WRITE_KEY
+SUPABASE_WRITE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+SUPABASE_READ_KEY = SUPABASE_ANON_KEY
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
 SUPABASE_STORAGE_BUCKET = os.environ.get("SUPABASE_STORAGE_BUCKET", "media")
 MAX_UPLOAD_BYTES = 100 * 1024 * 1024
@@ -34,9 +32,7 @@ supabase_admin = None
 if not SUPABASE_URL:
     SUPABASE_CONFIG_ERROR = "Falta configurar SUPABASE_URL en Render."
 elif not SUPABASE_READ_KEY:
-    SUPABASE_CONFIG_ERROR = (
-        "Configura SUPABASE_ANON_KEY o una clave Supabase válida para las lecturas."
-    )
+    SUPABASE_CONFIG_ERROR = "Configura SUPABASE_ANON_KEY para las lecturas."
 else:
     try:
         supabase = create_client(SUPABASE_URL, SUPABASE_READ_KEY)
@@ -118,7 +114,7 @@ def requiere_admin(funcion):
         if supabase_admin is None:
             return respuesta_error(
                 SUPABASE_CONFIG_ERROR
-                or "Configura SUPABASE_SERVICE_ROLE_KEY o SUPABASE_KEY con rol service_role.",
+                or "Configura SUPABASE_SERVICE_ROLE_KEY con rol service_role.",
                 503,
             )
 
@@ -200,7 +196,7 @@ def crear_publicacion():
     if cliente_admin is None:
         return respuesta_error(
             SUPABASE_CONFIG_ERROR
-            or "Configura SUPABASE_SERVICE_ROLE_KEY o SUPABASE_KEY con rol service_role.",
+            or "Configura SUPABASE_SERVICE_ROLE_KEY con rol service_role.",
             503,
         )
 
@@ -277,7 +273,7 @@ def eliminar_publicacion(publicacion_id):
     if cliente_admin is None:
         return respuesta_error(
             SUPABASE_CONFIG_ERROR
-            or "Configura SUPABASE_SERVICE_ROLE_KEY o SUPABASE_KEY con rol service_role.",
+            or "Configura SUPABASE_SERVICE_ROLE_KEY con rol service_role.",
             503,
         )
 
