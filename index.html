@@ -255,10 +255,22 @@
             if (!contenedor) return;
 
             try {
-                let response = await fetch('/api/publicaciones?seccion=inicio', { cache: 'no-store' });
-                if (!response.ok) throw new Error('HTTP ' + response.status);
-                let data = await response.json();
-                var noticiasAdmin = data.success ? data.publicaciones : [];
+                let responses = await Promise.all([
+                    fetch('/api/publicaciones?seccion=inicio', { cache: 'no-store' }),
+                    fetch('/api/publicaciones?seccion=videos', { cache: 'no-store' })
+                ]);
+                if (responses.some(function(response) { return !response.ok; })) {
+                    throw new Error('No se pudieron cargar todas las publicaciones.');
+                }
+                let resultados = await Promise.all(responses.map(function(response) {
+                    return response.json();
+                }));
+                var noticiasAdmin = [
+                    ...(resultados[0].success ? resultados[0].publicaciones : []),
+                    ...(resultados[1].success ? resultados[1].publicaciones : [])
+                ].sort(function(a, b) {
+                    return new Date(b.fecha).getTime() - new Date(a.fecha).getTime();
+                });
 
                 if (!noticiasAdmin || noticiasAdmin.length === 0) {
                     contenedor.innerHTML = '<p class="mensaje-vacio">No hay publicaciones recientes en este momento.</p>';
@@ -280,7 +292,7 @@
 
                     var html = '<div class="post-card">' +
                         '<div class="post-header">' +
-                            '<span class="post-badge">Publicación</span>' +
+                            '<span class="post-badge">' + (n.mediaType === 'video' ? 'Video' : 'Publicación') + '</span>' +
                             '<span class="post-date">' + escaparHtml(n.fecha || '') + '</span>' +
                         '</div>' +
                         '<h3>' + tituloHtml + '</h3>' +
