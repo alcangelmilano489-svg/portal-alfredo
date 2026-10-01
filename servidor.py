@@ -81,13 +81,16 @@ def subir_archivo_supabase(bucket, path, nombre, contenido, content_type):
 
     ruta = "/".join(quote(parte, safe="") for parte in path.split("/"))
     bucket_url = quote(bucket, safe="")
+    headers = {
+        "apikey": SUPABASE_WRITE_KEY,
+        "x-upsert": "false",
+    }
+    if not SUPABASE_WRITE_KEY.startswith("sb_secret_"):
+        headers["Authorization"] = f"Bearer {SUPABASE_WRITE_KEY}"
+
     response = httpx.post(
         f"{SUPABASE_URL.rstrip('/')}/storage/v1/object/{bucket_url}/{ruta}",
-        headers={
-            "apikey": SUPABASE_WRITE_KEY,
-            "Authorization": f"Bearer {SUPABASE_WRITE_KEY}",
-            "x-upsert": "false",
-        },
+        headers=headers,
         files={"file": (nombre, contenido, content_type)},
         timeout=120.0,
     )
