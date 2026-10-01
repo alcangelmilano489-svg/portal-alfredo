@@ -23,9 +23,26 @@ body {
 .header-institucional {
     background: linear-gradient(135deg, #0b1f4d 0%, #1e3a8a 100%);
     color: #ffffff;
-    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
     padding: 30px 20px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.header-logo {
+    width: 140px;
+    height: 140px;
+    flex: 0 0 auto;
+    object-fit: cover;
+    border: 3px solid rgba(255, 255, 255, 0.8);
+    border-radius: 8px;
+}
+
+.header-contenido {
+    min-width: 0;
+    text-align: left;
 }
 
 .header-institucional .header-sub {
@@ -595,8 +612,27 @@ body {
 
 /* Responsividad */
 @media (max-width: 600px) {
+    .header-institucional {
+        gap: 14px;
+        padding: 22px 16px;
+    }
+
+    .header-logo {
+        width: 100px;
+        height: 100px;
+    }
+
+    .header-institucional .header-sub {
+        font-size: 10px;
+        letter-spacing: 1.5px;
+    }
+
     .header-institucional h1 {
         font-size: 20px;
+    }
+
+    .header-institucional p {
+        font-size: 14px;
     }
 
     .menu-navegacion a {
