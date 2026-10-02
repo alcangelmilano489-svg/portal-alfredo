@@ -26,6 +26,7 @@ SUPABASE_WRITE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
 SUPABASE_READ_KEY = SUPABASE_ANON_KEY
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
 SUPABASE_STORAGE_BUCKET = os.environ.get("SUPABASE_STORAGE_BUCKET", "media")
+SECCIONES_EDITORIALES = {"vida", "obra"}
 MAX_UPLOAD_BYTES = 100 * 1024 * 1024
 app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_BYTES
 
@@ -196,6 +197,75 @@ def configuracion_publica():
         "supabaseUrl": SUPABASE_URL,
         "supabaseAnonKey": SUPABASE_ANON_KEY,
     })
+
+
+@app.route("/api/secciones", methods=["GET"])
+def obtener_contenido_secciones():
+    if supabase is None:
+        return respuesta_error(
+            SUPABASE_CONFIG_ERROR or "Supabase no está configurado.", 503
+        )
+
+    try:
+        filas = (
+            supabase.table("contenido_secciones")
+            .select("seccion,contenido,updated_at")
+            .in_("seccion", sorted(SECCIONES_EDITORIALES))
+            .execute()
+            .data
+        )
+        contenido = {seccion: None for seccion in SECCIONES_EDITORIALES}
+        for fila in filas:
+            seccion = fila.get("seccion")
+            if seccion in SECCIONES_EDITORIALES:
+                contenido[seccion] = fila.get("contenido") or ""
+        return jsonify({"success": True, "secciones": contenido})
+    except Exception:
+        app.logger.exception("No se pudo cargar el contenido editorial")
+        return respuesta_error("No se pudo cargar el contenido de las secciones.", 500)
+
+
+@app.route("/api/secciones/<seccion>", methods=["PUT"])
+@requiere_admin
+def actualizar_contenido_seccion(seccion):
+    if seccion not in SECCIONES_EDITORIALES:
+        return respuesta_error("Sección editorial no válida.", 404)
+
+    datos = request.get_json(silent=True) or {}
+    contenido = datos.get("contenido")
+    if not isinstance(contenido, str):
+        return respuesta_error("El contenido debe ser texto.", 400)
+    if len(contenido) > 100000:
+        return respuesta_error("El texto supera el límite de 100 000 caracteres.", 413)
+
+    actualizado = datetime.now(timezone.utc).isoformat()
+    fila = {"seccion": seccion, "contenido": contenido, "updated_at": actualizado}
+    try:
+        if SUPABASE_WRITE_KEY and SUPABASE_WRITE_KEY.startswith("sb_secret_"):
+            filas = solicitar_supabase_admin(
+                "POST",
+                "contenido_secciones",
+                params={"on_conflict": "seccion"},
+                json=fila,
+                prefer="resolution=merge-duplicates,return=representation",
+            )
+        else:
+            filas = (
+                supabase_admin.table("contenido_secciones")
+                .upsert(fila, on_conflict="seccion")
+                .execute()
+                .data
+            )
+        guardada = filas[0] if filas else fila
+        return jsonify({
+            "success": True,
+            "seccion": seccion,
+            "contenido": guardada.get("contenido", contenido),
+            "updated_at": guardada.get("updated_at", actualizado),
+        })
+    except Exception:
+        app.logger.exception("No se pudo guardar el contenido editorial")
+        return respuesta_error("No se pudo guardar el contenido de la sección.", 500)
 
 
 @app.route("/assets/<path:filename>")

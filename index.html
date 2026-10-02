@@ -47,7 +47,7 @@
 
     <section id="vida" class="seccion-fija">
         <div class="seccion-header"><h2>Vida de Alfredo Maneiro</h2></div>
-        <div class="contenido-seccion">
+        <div id="contenido-vida" class="contenido-seccion" style="white-space:pre-wrap;">
             <p><strong>Alfredo Maneiro González</strong> fue un político, filósofo y teórico venezolano, nacido en Caracas el 30 de enero de 1937 y fallecido el 24 de octubre de 1982.</p>
             <p>Su pensamiento estuvo marcado por la búsqueda de nuevas formas de hacer política y por el análisis de la realidad social venezolana.</p>
         </div>
@@ -55,7 +55,7 @@
 
     <section id="obra" class="seccion-fija">
         <div class="seccion-header"><h2>Obra</h2></div>
-        <div class="contenido-seccion">
+        <div id="contenido-obra" class="contenido-seccion" style="white-space:pre-wrap;">
             <p>Espacio dedicado al análisis y difusión de los aportes teóricos y políticos de Alfredo Maneiro.</p>
         </div>
     </section>
@@ -444,7 +444,28 @@
 
         var realtimeActivo = false;
 
+        async function renderizarSeccionesEditoriales() {
+            try {
+                var response = await fetch('/api/secciones', { cache: 'no-store' });
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                var resultado = await response.json();
+                if (!resultado.success) throw new Error(resultado.error || 'Error al cargar las secciones.');
+
+                var contenido = resultado.secciones || {};
+                ['vida', 'obra'].forEach(function(seccion) {
+                    var destino = document.getElementById('contenido-' + seccion);
+                    var texto = contenido[seccion];
+                    if (destino && typeof texto === 'string') {
+                        destino.textContent = texto.trim() ? texto : 'Aún no hay contenido publicado.';
+                    }
+                });
+            } catch (error) {
+                console.error('No se pudo cargar el contenido editorial:', error);
+            }
+        }
+
         function actualizarContenidoPublico() {
+            renderizarSeccionesEditoriales();
             renderizarNoticias();
             renderizarGaleria('fotos', 'galeria-fotos', 'image');
             renderizarGaleria('videos', 'galeria-videos', 'video');
@@ -481,6 +502,11 @@
                         schema: 'public',
                         table: 'comentarios'
                     }, actualizarComentariosPublicos)
+                    .on('postgres_changes', {
+                        event: '*',
+                        schema: 'public',
+                        table: 'contenido_secciones'
+                    }, renderizarSeccionesEditoriales)
                     .subscribe(function(estado) {
                         realtimeActivo = estado === 'SUBSCRIBED';
                     });
