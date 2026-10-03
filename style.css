@@ -23,9 +23,26 @@ body {
 .header-institucional {
     background: linear-gradient(135deg, #0b1f4d 0%, #1e3a8a 100%);
     color: #ffffff;
-    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
     padding: 30px 20px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.header-logo {
+    width: 140px;
+    height: 140px;
+    flex: 0 0 auto;
+    object-fit: cover;
+    border: 3px solid rgba(255, 255, 255, 0.8);
+    border-radius: 8px;
+}
+
+.header-contenido {
+    min-width: 0;
+    text-align: left;
 }
 
 .header-institucional .header-sub {
@@ -305,6 +322,71 @@ body {
     margin-bottom: 20px;
 }
 
+.suscripcion-seccion {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 1fr);
+    gap: 12px 24px;
+    align-items: center;
+    margin-top: 28px;
+    padding-top: 22px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.suscripcion-texto h3 {
+    color: #0b1f4d;
+    font-size: 17px;
+}
+
+.suscripcion-texto p,
+.estado-suscripcion {
+    color: #64748b;
+    font-size: 13px;
+}
+
+.form-suscripcion {
+    display: flex;
+    gap: 8px;
+}
+
+.form-suscripcion input[type="email"] {
+    min-width: 0;
+    flex: 1;
+    padding: 10px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font: inherit;
+}
+
+.btn-suscribir {
+    padding: 10px 14px;
+    border: 0;
+    border-radius: 6px;
+    background: #0f766e;
+    color: #fff;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-suscribir:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
+.estado-suscripcion {
+    grid-column: 1 / -1;
+    min-height: 1.4em;
+}
+
+.campo-oculto {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+}
+
 .mensaje-vacio {
     color: #64748b;
     text-align: center;
@@ -430,6 +512,24 @@ body {
     margin-bottom: 8px;
     border-radius: 4px;
     font-size: 14px;
+}
+
+.comentario-item p {
+    margin: 3px 0 0;
+    color: #334155;
+    font-size: 13px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.comentario-item small {
+    color: #64748b;
+    font-size: 11px;
+}
+
+.estado-comentarios {
+    color: #64748b;
+    font-size: 13px;
 }
 
 .comentario-item strong {
@@ -595,8 +695,27 @@ body {
 
 /* Responsividad */
 @media (max-width: 600px) {
+    .header-institucional {
+        gap: 14px;
+        padding: 22px 16px;
+    }
+
+    .header-logo {
+        width: 100px;
+        height: 100px;
+    }
+
+    .header-institucional .header-sub {
+        font-size: 10px;
+        letter-spacing: 1.5px;
+    }
+
     .header-institucional h1 {
         font-size: 20px;
+    }
+
+    .header-institucional p {
+        font-size: 14px;
     }
 
     .menu-navegacion a {
@@ -614,6 +733,14 @@ body {
 
     .post-card {
         padding: 15px;
+    }
+
+    .suscripcion-seccion {
+        grid-template-columns: 1fr;
+    }
+
+    .form-suscripcion {
+        flex-direction: column;
     }
 
     .footer-institucional {
@@ -692,7 +819,40 @@ body {
     color: #1e3a8a;
 }
 
+.btn-flotante-admin {
+    position: fixed;
+    right: 25px;
+    bottom: 25px;
+    z-index: 9999;
+    display: flex;
+    width: 55px;
+    height: 55px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: #2563eb;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    font-size: 24px;
+    line-height: 1;
+    text-decoration: none;
+    transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.btn-flotante-admin:hover,
+.btn-flotante-admin:focus-visible {
+    background: #1d4ed8;
+    transform: translateY(-2px);
+}
+
 @media (max-width: 600px) {
+    .btn-flotante-admin {
+        right: 16px;
+        bottom: 16px;
+        width: 48px;
+        height: 48px;
+    }
+
     .admin-link-oculto {
         bottom: 15px;
         right: 15px;

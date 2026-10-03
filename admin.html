@@ -46,14 +46,15 @@
 
             <!-- 1. SECCIÓN INICIO / NOTICIAS -->
             <div class="admin-card">
-                <h2>🏠 Sección Inicio (Publicaciones y Noticias)</h2>
+                <h2>🏠 Publicaciones generales (Inicio)</h2>
                 <label for="admin-titulo">Título:</label>
                 <input type="text" id="admin-titulo" placeholder="Título de la publicación...">
                 <label for="admin-texto-inicio">Contenido:</label>
                 <textarea id="admin-texto-inicio" placeholder="Escribe el mensaje o noticia..."></textarea>
                 <label for="admin-archivo-inicio">Adjuntar Imagen o Video opcional:</label>
                 <input type="file" id="admin-archivo-inicio" accept="image/*,video/*">
-                <button class="btn-actualizar" onclick="publicarInicio(event)">Publicar en Inicio</button>
+                <button class="btn-actualizar" onclick="publicarInicio(event)">Publicar en Publicaciones</button>
+                <p style="color:#475569;font-size:13px;margin:10px 0 0;">Las imágenes o videos adjuntos aquí permanecen en Publicaciones. La galería Videos se administra por separado.</p>
             </div>
 
             <!-- 2. SECCIÓN VIDA -->
@@ -62,6 +63,7 @@
                 <label for="admin-vida">Editar texto de la Biografía:</label>
                 <textarea id="admin-vida" placeholder="Escribe la biografía completa de Alfredo Maneiro..."></textarea>
                 <button class="btn-actualizar" onclick="guardarSeccionTexto('vida', 'admin-vida', 'Biografía')">Guardar Cambios de Vida</button>
+                <p id="estado-vida" aria-live="polite" style="font-size:13px;margin:10px 0 0;"></p>
             </div>
 
             <!-- 3. SECCIÓN OBRA -->
@@ -70,6 +72,7 @@
                 <label for="admin-obra">Editar texto de la Obra:</label>
                 <textarea id="admin-obra" placeholder="Escribe sobre la obra, escritos y pensamiento..."></textarea>
                 <button class="btn-actualizar" onclick="guardarSeccionTexto('obra', 'admin-obra', 'Obra')">Guardar Cambios de Obra</button>
+                <p id="estado-obra" aria-live="polite" style="font-size:13px;margin:10px 0 0;"></p>
             </div>
 
             <!-- 4. SECCIÓN FOTOS -->
@@ -166,11 +169,41 @@
             }
         }
 
-        function cargarDatosIniciales() {
-            // Cargar textos de Vida y Obra
-            document.getElementById('admin-vida').value = localStorage.getItem('texto_vida') || '';
-            document.getElementById('admin-obra').value = localStorage.getItem('texto_obra') || '';
-            
+        async function cargarDatosIniciales() {
+            try {
+                const response = await fetch('/api/secciones', { cache: 'no-store' });
+                const result = await response.json();
+                if (!response.ok || !result.success) {
+                    throw new Error(result.error || 'No se pudieron cargar Vida y Obra desde Supabase.');
+                }
+
+                const secciones = result.secciones || {};
+                ['vida', 'obra'].forEach(function(clave) {
+                    const remoto = secciones[clave];
+                    const local = localStorage.getItem('texto_' + clave) || '';
+                    const estado = document.getElementById('estado-' + clave);
+                    if (typeof remoto === 'string') {
+                        document.getElementById('admin-' + clave).value = remoto;
+                        estado.textContent = remoto ? 'Contenido cargado desde Supabase.' : 'La sección está vacía en Supabase.';
+                        estado.style.color = '#475569';
+                    } else {
+                        document.getElementById('admin-' + clave).value = local;
+                        estado.textContent = local.trim()
+                            ? 'Texto recuperado de este navegador; pulsa Guardar para publicarlo para todos.'
+                            : 'Aún no hay contenido guardado.';
+                        estado.style.color = local.trim() ? '#92400e' : '#475569';
+                    }
+                });
+            } catch (error) {
+                ['vida', 'obra'].forEach(function(clave) {
+                    const local = localStorage.getItem('texto_' + clave) || '';
+                    document.getElementById('admin-' + clave).value = local;
+                    const estado = document.getElementById('estado-' + clave);
+                    estado.textContent = 'No se pudo consultar Supabase. ' + (local.trim() ? 'Se conservó el borrador local; ' : '') + 'Revisa la conexión antes de guardar.';
+                    estado.style.color = '#b91c1c';
+                });
+            }
+
             // Cargar datos individuales de contacto y redes sociales
             document.getElementById('admin-contacto-email').value = localStorage.getItem('contacto_email') || '';
             document.getElementById('admin-contacto-whatsapp').value = localStorage.getItem('contacto_whatsapp') || '';
@@ -179,14 +212,37 @@
             document.getElementById('admin-contacto-facebook').value = localStorage.getItem('contacto_facebook') || '';
             document.getElementById('admin-contacto-x').value = localStorage.getItem('contacto_x') || '';
 
-            actualizarListaInicio();
+            await actualizarListaInicio();
         }
 
         // Guardar textos fijos (Vida, Obra)
-        function guardarSeccionTexto(claveLocal, idTextarea, nombreSeccion) {
-            let texto = document.getElementById(idTextarea).value;
-            localStorage.setItem('texto_' + claveLocal, texto);
-            alert("¡Sección de " + nombreSeccion + " actualizada correctamente!");
+        async function guardarSeccionTexto(claveLocal, idTextarea, nombreSeccion) {
+            const texto = document.getElementById(idTextarea).value;
+            const estado = document.getElementById('estado-' + claveLocal);
+            estado.textContent = 'Guardando en Supabase...';
+            estado.style.color = '#475569';
+
+            try {
+                const response = await fetch('/api/secciones/' + encodeURIComponent(claveLocal), {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-Password': adminPassword
+                    },
+                    body: JSON.stringify({ contenido: texto })
+                });
+                const result = await response.json();
+                if (!response.ok || !result.success) {
+                    throw new Error(result.error || 'No se pudo guardar la sección.');
+                }
+
+                localStorage.removeItem('texto_' + claveLocal);
+                estado.textContent = 'Sección ' + nombreSeccion + ' guardada en Supabase y visible para los visitantes.';
+                estado.style.color = '#166534';
+            } catch (error) {
+                estado.textContent = 'No se guardó: ' + (error.message || 'error de conexión.');
+                estado.style.color = '#b91c1c';
+            }
         }
 
         // Guardar Redes Sociales y Contacto por separado

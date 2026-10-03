@@ -9,9 +9,12 @@
 </head>
 <body>
     <header class="header-institucional">
-        <div class="header-sub">Portal informativo</div>
-        <h1>Alfredo Maneiro</h1>
-        <p>30 de enero de 1937 | 24 de octubre de 1982</p>
+        <img class="header-logo" src="/assets/logo_siembra.jpeg" alt="44 años de su siembra">
+        <div class="header-contenido">
+            <div class="header-sub">Portal informativo</div>
+            <h1>Alfredo Maneiro</h1>
+            <p>30 de enero de 1937 | 24 de octubre de 1982</p>
+        </div>
     </header>
 
     <nav class="menu-navegacion" aria-label="Navegación principal">
@@ -44,7 +47,7 @@
 
     <section id="vida" class="seccion-fija">
         <div class="seccion-header"><h2>Vida de Alfredo Maneiro</h2></div>
-        <div class="contenido-seccion">
+        <div id="contenido-vida" class="contenido-seccion" style="white-space:pre-wrap;">
             <p><strong>Alfredo Maneiro González</strong> fue un político, filósofo y teórico venezolano, nacido en Caracas el 30 de enero de 1937 y fallecido el 24 de octubre de 1982.</p>
             <p>Su pensamiento estuvo marcado por la búsqueda de nuevas formas de hacer política y por el análisis de la realidad social venezolana.</p>
         </div>
@@ -52,7 +55,7 @@
 
     <section id="obra" class="seccion-fija">
         <div class="seccion-header"><h2>Obra</h2></div>
-        <div class="contenido-seccion">
+        <div id="contenido-obra" class="contenido-seccion" style="white-space:pre-wrap;">
             <p>Espacio dedicado al análisis y difusión de los aportes teóricos y políticos de Alfredo Maneiro.</p>
         </div>
     </section>
@@ -95,6 +98,21 @@
             <div id="contenedor-noticias-admin">
                 <p class="mensaje-vacio">Cargando publicaciones...</p>
             </div>
+            <section class="suscripcion-seccion" aria-labelledby="titulo-suscripcion">
+                <div class="suscripcion-texto">
+                    <h3 id="titulo-suscripcion">Suscríbete al portal</h3>
+                    <p>Suscriptores: <strong id="total-suscriptores">...</strong></p>
+                </div>
+                <form id="form-suscripcion" class="form-suscripcion">
+                    <label class="campo-oculto" for="sitio-web-suscripcion">Deja este campo vacío</label>
+                    <input id="sitio-web-suscripcion" name="sitio-web" type="text" tabindex="-1" autocomplete="off" class="campo-oculto" aria-hidden="true">
+                    <label class="campo-oculto" for="email-suscripcion">Correo electrónico</label>
+                    <input id="email-suscripcion" name="email" type="email" placeholder="Tu correo electrónico" autocomplete="email" maxlength="254" required>
+                    <button type="submit" class="btn-suscribir">Suscribirme</button>
+                </form>
+                <p class="nota-privacidad-suscripcion">Tu correo se guarda de forma privada.</p>
+                <p id="estado-suscripcion" class="estado-suscripcion" aria-live="polite"></p>
+            </section>
         </section>
     </main>
 
@@ -192,47 +210,101 @@
             }).join('');
         }
 
-        function cargarComentarios(postId) {
-            return JSON.parse(localStorage.getItem('post_' + postId + '_comentarios') || '[]');
-        }
-
-        function guardarComentarios(postId, comentarios) {
-            localStorage.setItem('post_' + postId + '_comentarios', JSON.stringify(comentarios));
-        }
-
-        function agregarComentario(postId) {
+        async function agregarComentario(postId) {
             var input = document.getElementById('input-comentario-' + postId);
             var texto = input.value.trim();
-            if (texto === "") {
-                alert("Por favor escribe un comentario antes de publicar.");
+            if (!texto || texto.length > 1000) {
+                alert("Escribe un comentario de hasta 1000 caracteres.");
                 return;
             }
-            var comentarios = cargarComentarios(postId);
-            comentarios.push({
-                texto: texto,
-                fecha: new Date().toLocaleDateString(),
-                hora: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
-            });
-            guardarComentarios(postId, comentarios);
-            input.value = "";
-            renderizarComentarios(postId);
+
+            try {
+                var response = await fetch('/api/publicaciones/' + encodeURIComponent(postId) + '/comentarios', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ texto: texto })
+                });
+                var result = await response.json();
+                if (!response.ok || !result.success) {
+                    throw new Error(result.error || 'No se pudo guardar el comentario.');
+                }
+                input.value = '';
+                await renderizarComentarios(postId);
+            } catch (error) {
+                alert(error.message || 'No se pudo guardar el comentario.');
+            }
         }
 
-        function renderizarComentarios(postId) {
+        async function renderizarComentarios(postId) {
             var lista = document.getElementById('lista-comentarios-' + postId);
             var spanContador = document.getElementById('num-comentarios-' + postId);
             if (!lista) return;
 
-            var comentarios = cargarComentarios(postId);
-            lista.innerHTML = comentarios.map(function(c) {
-                return '<div class="comentario-item">' +
-                    '<strong>Visitante:</strong>' +
-                    '<p style="margin: 3px 0 0 0; color: #334155; font-size: 13px;">' + c.texto + '</p>' +
-                    '<small>' + c.fecha + ' ' + c.hora + '</small>' +
-                '</div>';
-            }).join('');
+            try {
+                var response = await fetch('/api/publicaciones/' + encodeURIComponent(postId) + '/comentarios', { cache: 'no-store' });
+                var result = await response.json();
+                if (!response.ok || !result.success) throw new Error(result.error || 'Error al cargar comentarios.');
+                var comentarios = result.comentarios || [];
+                lista.innerHTML = comentarios.map(function(c) {
+                    var fecha = c.created_at ? new Date(c.created_at).toLocaleString() : '';
+                    return '<div class="comentario-item">' +
+                        '<strong>' + escaparHtml(c.nombre || 'Visitante') + '</strong>' +
+                        '<p>' + escaparHtml(c.texto) + '</p>' +
+                        '<small>' + escaparHtml(fecha) + '</small>' +
+                    '</div>';
+                }).join('');
+                if (spanContador) spanContador.textContent = comentarios.length;
+            } catch (error) {
+                lista.innerHTML = '<p class="estado-comentarios">No se pudieron cargar los comentarios.</p>';
+            }
+        }
 
-            if (spanContador) spanContador.textContent = comentarios.length;
+        async function actualizarTotalSuscriptores() {
+            var total = document.getElementById('total-suscriptores');
+            try {
+                var response = await fetch('/api/suscripciones/count', { cache: 'no-store' });
+                var result = await response.json();
+                if (!response.ok || !result.success) throw new Error('No se pudo cargar el total.');
+                total.textContent = Number(result.count).toLocaleString();
+            } catch (error) {
+                total.textContent = '—';
+            }
+        }
+
+        function iniciarSuscripciones() {
+            var form = document.getElementById('form-suscripcion');
+            if (!form) return;
+            actualizarTotalSuscriptores();
+
+            form.addEventListener('submit', async function(event) {
+                event.preventDefault();
+                var email = document.getElementById('email-suscripcion');
+                var trampa = document.getElementById('sitio-web-suscripcion');
+                var estado = document.getElementById('estado-suscripcion');
+                var boton = form.querySelector('button[type="submit"]');
+                if (trampa.value) return;
+                boton.disabled = true;
+                estado.textContent = 'Procesando suscripción...';
+
+                try {
+                    var response = await fetch('/api/suscripciones', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: email.value })
+                    });
+                    var result = await response.json();
+                    if (!response.ok || !result.success) throw new Error(result.error || 'No se pudo completar la suscripción.');
+                    estado.textContent = result.alreadySubscribed
+                        ? 'Este correo ya está suscrito.'
+                        : '¡Suscripción completada!';
+                    email.value = '';
+                    await actualizarTotalSuscriptores();
+                } catch (error) {
+                    estado.textContent = error.message || 'No se pudo completar la suscripción.';
+                } finally {
+                    boton.disabled = false;
+                }
+            });
         }
 
         function escaparHtml(valor) {
@@ -255,10 +327,20 @@
             if (!contenedor) return;
 
             try {
-                let response = await fetch('/api/publicaciones?seccion=inicio', { cache: 'no-store' });
-                if (!response.ok) throw new Error('HTTP ' + response.status);
-                let data = await response.json();
-                var noticiasAdmin = data.success ? data.publicaciones : [];
+                var response = await fetch('/api/publicaciones?seccion=inicio', { cache: 'no-store' });
+                if (!response.ok) {
+                    throw new Error('No se pudieron cargar las publicaciones.');
+                }
+                var resultado = await response.json();
+                var noticiasAdmin = (resultado.success ? resultado.publicaciones : []).filter(function(publicacion) {
+                    return Boolean(
+                        (publicacion.titulo && publicacion.titulo.trim()) ||
+                        (publicacion.texto && publicacion.texto.trim()) ||
+                        publicacion.mediaUrl
+                    );
+                }).sort(function(a, b) {
+                    return new Date(b.fecha).getTime() - new Date(a.fecha).getTime();
+                });
 
                 if (!noticiasAdmin || noticiasAdmin.length === 0) {
                     contenedor.innerHTML = '<p class="mensaje-vacio">No hay publicaciones recientes en este momento.</p>';
@@ -277,17 +359,18 @@
                     var tituloHtml = escaparHtml(n.titulo || '');
                     var textoHtml = escaparHtml(n.texto || '');
                     var mediaUrl = urlMultimedia(n.mediaUrl);
+                    var esVideo = n.mediaType === 'video' || /\.(mp4|m4v|mov|webm)(?:$|[?#])/i.test(mediaUrl);
 
                     var html = '<div class="post-card">' +
                         '<div class="post-header">' +
-                            '<span class="post-badge">Publicación</span>' +
+                            '<span class="post-badge">' + (esVideo ? 'Video' : 'Publicación') + '</span>' +
                             '<span class="post-date">' + escaparHtml(n.fecha || '') + '</span>' +
                         '</div>' +
                         '<h3>' + tituloHtml + '</h3>' +
                         '<p class="post-texto">' + textoHtml + '</p>';
 
-                    if (mediaUrl && n.mediaType === 'video') {
-                        html += '<video src="' + escaparHtml(mediaUrl) + '" controls class="post-media-video" style="width:100%; border-radius:8px; margin-top:10px;"></video>';
+                    if (mediaUrl && esVideo) {
+                        html += '<video src="' + escaparHtml(mediaUrl) + '" controls playsinline preload="metadata" class="post-media-video" style="width:100%; border-radius:8px; margin-top:10px;"></video>';
                     } else if (mediaUrl && n.mediaType === 'image') {
                         html += '<img src="' + escaparHtml(mediaUrl) + '" alt="' + tituloHtml + '" class="post-media-img" style="width:100%; border-radius:8px; margin-top:10px;">';
                     }
@@ -361,10 +444,40 @@
 
         var realtimeActivo = false;
 
+        async function renderizarSeccionesEditoriales() {
+            try {
+                var response = await fetch('/api/secciones', { cache: 'no-store' });
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                var resultado = await response.json();
+                if (!resultado.success) throw new Error(resultado.error || 'Error al cargar las secciones.');
+
+                var contenido = resultado.secciones || {};
+                ['vida', 'obra'].forEach(function(seccion) {
+                    var destino = document.getElementById('contenido-' + seccion);
+                    var texto = contenido[seccion];
+                    if (destino && typeof texto === 'string') {
+                        destino.textContent = texto.trim() ? texto : 'Aún no hay contenido publicado.';
+                    }
+                });
+            } catch (error) {
+                console.error('No se pudo cargar el contenido editorial:', error);
+            }
+        }
+
         function actualizarContenidoPublico() {
+            renderizarSeccionesEditoriales();
             renderizarNoticias();
             renderizarGaleria('fotos', 'galeria-fotos', 'image');
             renderizarGaleria('videos', 'galeria-videos', 'video');
+        }
+
+        function actualizarComentariosPublicos() {
+            document.querySelectorAll('.lista-comentarios[id]').forEach(function(lista) {
+                var prefijo = 'lista-comentarios-';
+                if (lista.id.indexOf(prefijo) === 0) {
+                    renderizarComentarios(lista.id.slice(prefijo.length));
+                }
+            });
         }
 
         async function iniciarRealtime() {
@@ -384,6 +497,16 @@
                         schema: 'public',
                         table: 'publicaciones'
                     }, actualizarContenidoPublico)
+                    .on('postgres_changes', {
+                        event: '*',
+                        schema: 'public',
+                        table: 'comentarios'
+                    }, actualizarComentariosPublicos)
+                    .on('postgres_changes', {
+                        event: '*',
+                        schema: 'public',
+                        table: 'contenido_secciones'
+                    }, renderizarSeccionesEditoriales)
                     .subscribe(function(estado) {
                         realtimeActivo = estado === 'SUBSCRIBED';
                     });
@@ -394,6 +517,7 @@
 
         document.addEventListener('DOMContentLoaded', function() {
             actualizarContenidoPublico();
+            iniciarSuscripciones();
             iniciarRealtime();
             window.setInterval(function() {
                 if (document.visibilityState === 'visible' && !realtimeActivo) {
