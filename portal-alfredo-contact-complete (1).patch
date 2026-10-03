@@ -1,0 +1,1436 @@
+diff --git a/.gitignore b/.gitignore
+new file mode 100644
+index 0000000000000000000000000000000000000000..98dbeb43997e0d3f65ee193a2f0f895debc6a1f6
+--- /dev/null
++++ b/.gitignore
+@@ -0,0 +1,3 @@
++__pycache__/
++*.py[cod]
++.venv/
+diff --git a/admin.html b/admin.html
+index 53ce5aae33b38481b9451cd8f073d78fcc8a8c88..3df81a80a68556beaf1bc58cff05c1ab46a13ae0 100644
+--- a/admin.html
++++ b/admin.html
+@@ -11,7 +11,7 @@
+         .admin-card { background: #ffffff; padding: 25px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
+         .admin-card h2 { margin-top: 0; color: #1e3a8a; font-size: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }
+         label { display: block; margin-bottom: 6px; font-weight: bold; color: #334155; font-size: 14px; }
+-        textarea, input[type="text"], input[type="password"], input[type="file"] { width: 100%; padding: 10px; margin-bottom: 12px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
++        textarea, input[type="text"], input[type="email"], input[type="tel"], input[type="url"], input[type="password"], input[type="file"] { width: 100%; padding: 10px; margin-bottom: 12px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
+         textarea { height: 120px; resize: vertical; }
+         .btn-actualizar { background: #2563eb; color: white; border: none; padding: 10px 20px; font-size: 15px; font-weight: bold; border-radius: 6px; cursor: pointer; }
+         .btn-actualizar:hover { background: #1d4ed8; }
+@@ -46,14 +46,15 @@
+ 
+             <!-- 1. SECCIÓN INICIO / NOTICIAS -->
+             <div class="admin-card">
+-                <h2>🏠 Sección Inicio (Publicaciones y Noticias)</h2>
++                <h2>🏠 Publicaciones generales (Inicio)</h2>
+                 <label for="admin-titulo">Título:</label>
+                 <input type="text" id="admin-titulo" placeholder="Título de la publicación...">
+                 <label for="admin-texto-inicio">Contenido:</label>
+                 <textarea id="admin-texto-inicio" placeholder="Escribe el mensaje o noticia..."></textarea>
+                 <label for="admin-archivo-inicio">Adjuntar Imagen o Video opcional:</label>
+                 <input type="file" id="admin-archivo-inicio" accept="image/*,video/*">
+-                <button class="btn-actualizar" onclick="publicarInicio(event)">Publicar en Inicio</button>
++                <button class="btn-actualizar" onclick="publicarInicio(event)">Publicar en Publicaciones</button>
++                <p style="color:#475569;font-size:13px;margin:10px 0 0;">Las imágenes o videos adjuntos aquí permanecen en Publicaciones. La galería Videos se administra por separado.</p>
+             </div>
+ 
+             <!-- 2. SECCIÓN VIDA -->
+@@ -62,6 +63,7 @@
+                 <label for="admin-vida">Editar texto de la Biografía:</label>
+                 <textarea id="admin-vida" placeholder="Escribe la biografía completa de Alfredo Maneiro..."></textarea>
+                 <button class="btn-actualizar" onclick="guardarSeccionTexto('vida', 'admin-vida', 'Biografía')">Guardar Cambios de Vida</button>
++                <p id="estado-vida" aria-live="polite" style="font-size:13px;margin:10px 0 0;"></p>
+             </div>
+ 
+             <!-- 3. SECCIÓN OBRA -->
+@@ -70,6 +72,7 @@
+                 <label for="admin-obra">Editar texto de la Obra:</label>
+                 <textarea id="admin-obra" placeholder="Escribe sobre la obra, escritos y pensamiento..."></textarea>
+                 <button class="btn-actualizar" onclick="guardarSeccionTexto('obra', 'admin-obra', 'Obra')">Guardar Cambios de Obra</button>
++                <p id="estado-obra" aria-live="polite" style="font-size:13px;margin:10px 0 0;"></p>
+             </div>
+ 
+             <!-- 4. SECCIÓN FOTOS -->
+@@ -88,29 +91,25 @@
+                 <button class="btn-actualizar" onclick="subirMultimedia('videos', 'admin-video-archivo', 'admin-video-nombre', 'video', event)">Subir Video</button>
+             </div>
+ 
+-            <!-- 6. SECCIÓN CONTACTO Y REDES SOCIALES POR SEPARADO -->
++            <!-- 6. DATOS PÚBLICOS DE CONTACTO -->
+             <div class="admin-card">
+-                <h2>📞 Sección Contacto y Redes Sociales</h2>
+-                
+-                <label for="admin-contacto-email">Correo Electrónico:</label>
+-                <input type="text" id="admin-contacto-email" placeholder="ejemplo@correo.com">
++                <h2>📞 Canales públicos de contacto</h2>
++                <p style="color:#64748b;font-size:13px;margin:0 0 16px;">Completa solo los canales que quieras mostrar. Los campos vacíos no aparecerán en la página pública.</p>
+ 
+-                <label for="admin-contacto-whatsapp">Número de WhatsApp:</label>
+-                <input type="text" id="admin-contacto-whatsapp" placeholder="+58 412...">
++                <label for="admin-contacto-whatsapp">Número de WhatsApp (con código de país):</label>
++                <input type="tel" id="admin-contacto-whatsapp" maxlength="32" autocomplete="tel" placeholder="+58 412 123 4567">
+ 
+-                <label for="admin-contacto-tiktok">Usuario de TikTok:</label>
+-                <input type="text" id="admin-contacto-tiktok" placeholder="@tu_usuario">
++                <label for="admin-contacto-email">Correo electrónico:</label>
++                <input type="email" id="admin-contacto-email" maxlength="254" autocomplete="email" placeholder="contacto@ejemplo.com">
+ 
+-                <label for="admin-contacto-instagram">Usuario de Instagram:</label>
+-                <input type="text" id="admin-contacto-instagram" placeholder="@tu_usuario">
++                <label for="admin-contacto-messenger">Enlace de Facebook Messenger:</label>
++                <input type="url" id="admin-contacto-messenger" maxlength="2048" placeholder="https://m.me/NombreDeLaPagina">
+ 
+-                <label for="admin-contacto-facebook">Perfil o Página de Facebook:</label>
+-                <input type="text" id="admin-contacto-facebook" placeholder="Nombre o enlace de Facebook">
++                <label for="admin-contacto-tiktok">Usuario o enlace de TikTok:</label>
++                <input type="text" id="admin-contacto-tiktok" maxlength="2048" placeholder="@tu_usuario o https://www.tiktok.com/@tu_usuario">
+ 
+-                <label for="admin-contacto-x">Usuario de X (Twitter):</label>
+-                <input type="text" id="admin-contacto-x" placeholder="@tu_usuario">
+-
+-                <button class="btn-actualizar" onclick="guardarRedesContacto()">Guardar Redes y Contacto</button>
++                <button class="btn-actualizar" onclick="guardarRedesContacto(event)">Guardar canales de contacto</button>
++                <p id="estado-contacto" aria-live="polite" style="font-size:13px;margin:10px 0 0;"></p>
+             </div>
+ 
+             <!-- GESTOR GENERAL DE ELEMENTOS -->
+@@ -166,39 +165,184 @@
+             }
+         }
+ 
+-        function cargarDatosIniciales() {
+-            // Cargar textos de Vida y Obra
+-            document.getElementById('admin-vida').value = localStorage.getItem('texto_vida') || '';
+-            document.getElementById('admin-obra').value = localStorage.getItem('texto_obra') || '';
+-            
+-            // Cargar datos individuales de contacto y redes sociales
+-            document.getElementById('admin-contacto-email').value = localStorage.getItem('contacto_email') || '';
+-            document.getElementById('admin-contacto-whatsapp').value = localStorage.getItem('contacto_whatsapp') || '';
+-            document.getElementById('admin-contacto-tiktok').value = localStorage.getItem('contacto_tiktok') || '';
+-            document.getElementById('admin-contacto-instagram').value = localStorage.getItem('contacto_instagram') || '';
+-            document.getElementById('admin-contacto-facebook').value = localStorage.getItem('contacto_facebook') || '';
+-            document.getElementById('admin-contacto-x').value = localStorage.getItem('contacto_x') || '';
+-
+-            actualizarListaInicio();
++        async function cargarDatosIniciales() {
++            try {
++                const response = await fetch('/api/secciones', { cache: 'no-store' });
++                const result = await response.json();
++                if (!response.ok || !result.success) {
++                    throw new Error(result.error || 'No se pudieron cargar Vida y Obra desde Supabase.');
++                }
++
++                const secciones = result.secciones || {};
++                ['vida', 'obra'].forEach(function(clave) {
++                    const remoto = secciones[clave];
++                    const local = localStorage.getItem('texto_' + clave) || '';
++                    const estado = document.getElementById('estado-' + clave);
++                    if (typeof remoto === 'string') {
++                        document.getElementById('admin-' + clave).value = remoto;
++                        estado.textContent = remoto ? 'Contenido cargado desde Supabase.' : 'La sección está vacía en Supabase.';
++                        estado.style.color = '#475569';
++                    } else {
++                        document.getElementById('admin-' + clave).value = local;
++                        estado.textContent = local.trim()
++                            ? 'Texto recuperado de este navegador; pulsa Guardar para publicarlo para todos.'
++                            : 'Aún no hay contenido guardado.';
++                        estado.style.color = local.trim() ? '#92400e' : '#475569';
++                    }
++                });
++            } catch (error) {
++                ['vida', 'obra'].forEach(function(clave) {
++                    const local = localStorage.getItem('texto_' + clave) || '';
++                    document.getElementById('admin-' + clave).value = local;
++                    const estado = document.getElementById('estado-' + clave);
++                    estado.textContent = 'No se pudo consultar Supabase. ' + (local.trim() ? 'Se conservó el borrador local; ' : '') + 'Revisa la conexión antes de guardar.';
++                    estado.style.color = '#b91c1c';
++                });
++            }
++
++            await cargarContactoAdmin();
++
++            await actualizarListaInicio();
++        }
++
++        async function cargarContactoAdmin() {
++            const campos = {
++                whatsapp: 'admin-contacto-whatsapp',
++                email: 'admin-contacto-email',
++                messenger_url: 'admin-contacto-messenger',
++                tiktok_handle: 'admin-contacto-tiktok'
++            };
++            const clavesLocales = {
++                whatsapp: 'contacto_whatsapp',
++                email: 'contacto_email',
++                messenger_url: 'contacto_messenger',
++                tiktok_handle: 'contacto_tiktok'
++            };
++            const estado = document.getElementById('estado-contacto');
++            const aplicar = function(contacto) {
++                Object.keys(campos).forEach(function(campo) {
++                    document.getElementById(campos[campo]).value = contacto[campo] || '';
++                });
++            };
++            const borradorLocal = function() {
++                const valores = {};
++                Object.keys(clavesLocales).forEach(function(campo) {
++                    valores[campo] = localStorage.getItem(clavesLocales[campo]) || '';
++                });
++                return valores;
++            };
++
++            try {
++                const response = await fetch('/api/contacto-publico', { cache: 'no-store' });
++                const result = await response.json();
++                if (!response.ok || !result.success) {
++                    throw new Error(result.error || 'No se pudo consultar Supabase.');
++                }
++                if (result.contacto) {
++                    aplicar(result.contacto);
++                    estado.textContent = 'Canales cargados desde Supabase.';
++                    estado.style.color = '#475569';
++                } else {
++                    const local = borradorLocal();
++                    aplicar(local);
++                    const hayBorrador = Object.values(local).some(function(valor) { return valor.trim(); });
++                    estado.textContent = hayBorrador
++                        ? 'Se recuperaron datos de este navegador; pulsa Guardar para publicarlos para todos.'
++                        : 'Aún no hay canales guardados.';
++                    estado.style.color = hayBorrador ? '#92400e' : '#475569';
++                }
++            } catch (error) {
++                const local = borradorLocal();
++                aplicar(local);
++                estado.textContent = 'No se pudo consultar Supabase; se conservó el borrador local. Revisa la conexión antes de guardar.';
++                estado.style.color = '#b91c1c';
++            }
+         }
+ 
+         // Guardar textos fijos (Vida, Obra)
+-        function guardarSeccionTexto(claveLocal, idTextarea, nombreSeccion) {
+-            let texto = document.getElementById(idTextarea).value;
+-            localStorage.setItem('texto_' + claveLocal, texto);
+-            alert("¡Sección de " + nombreSeccion + " actualizada correctamente!");
++        async function guardarSeccionTexto(claveLocal, idTextarea, nombreSeccion) {
++            const texto = document.getElementById(idTextarea).value;
++            const estado = document.getElementById('estado-' + claveLocal);
++            estado.textContent = 'Guardando en Supabase...';
++            estado.style.color = '#475569';
++
++            try {
++                const response = await fetch('/api/secciones/' + encodeURIComponent(claveLocal), {
++                    method: 'PUT',
++                    headers: {
++                        'Content-Type': 'application/json',
++                        'X-Admin-Password': adminPassword
++                    },
++                    body: JSON.stringify({ contenido: texto })
++                });
++                const result = await response.json();
++                if (!response.ok || !result.success) {
++                    throw new Error(result.error || 'No se pudo guardar la sección.');
++                }
++
++                localStorage.removeItem('texto_' + claveLocal);
++                estado.textContent = 'Sección ' + nombreSeccion + ' guardada en Supabase y visible para los visitantes.';
++                estado.style.color = '#166534';
++            } catch (error) {
++                estado.textContent = 'No se guardó: ' + (error.message || 'error de conexión.');
++                estado.style.color = '#b91c1c';
++            }
+         }
+ 
+-        // Guardar Redes Sociales y Contacto por separado
+-        function guardarRedesContacto() {
+-            localStorage.setItem('contacto_email', document.getElementById('admin-contacto-email').value.trim());
+-            localStorage.setItem('contacto_whatsapp', document.getElementById('admin-contacto-whatsapp').value.trim());
+-            localStorage.setItem('contacto_tiktok', document.getElementById('admin-contacto-tiktok').value.trim());
+-            localStorage.setItem('contacto_instagram', document.getElementById('admin-contacto-instagram').value.trim());
+-            localStorage.setItem('contacto_facebook', document.getElementById('admin-contacto-facebook').value.trim());
+-            localStorage.setItem('contacto_x', document.getElementById('admin-contacto-x').value.trim());
++        // Guardar los canales públicos de contacto en Supabase
++        async function guardarRedesContacto(eventRef) {
++            const btn = eventRef && eventRef.currentTarget;
++            const estado = document.getElementById('estado-contacto');
++            const original = btn ? btn.textContent : '';
++            const contacto = {
++                whatsapp: document.getElementById('admin-contacto-whatsapp').value.trim(),
++                email: document.getElementById('admin-contacto-email').value.trim(),
++                messenger_url: document.getElementById('admin-contacto-messenger').value.trim(),
++                tiktok_handle: document.getElementById('admin-contacto-tiktok').value.trim()
++            };
++            const clavesLocales = {
++                whatsapp: 'contacto_whatsapp',
++                email: 'contacto_email',
++                messenger_url: 'contacto_messenger',
++                tiktok_handle: 'contacto_tiktok'
++            };
++
++            if (btn) {
++                btn.disabled = true;
++                btn.textContent = 'Guardando...';
++            }
++            estado.textContent = 'Guardando en Supabase...';
++            estado.style.color = '#475569';
+ 
+-            alert("¡Información de contacto y redes sociales actualizada correctamente!");
++            try {
++                const response = await fetch('/api/contacto-publico', {
++                    method: 'PUT',
++                    headers: {
++                        'Content-Type': 'application/json',
++                        'X-Admin-Password': adminPassword
++                    },
++                    body: JSON.stringify(contacto)
++                });
++                const result = await response.json();
++                if (!response.ok || !result.success) {
++                    throw new Error(result.error || 'No se pudo guardar la información de contacto.');
++                }
++
++                Object.values(clavesLocales).forEach(function(clave) { localStorage.removeItem(clave); });
++                estado.textContent = 'Canales guardados en Supabase y visibles para los visitantes.';
++                estado.style.color = '#166534';
++            } catch (error) {
++                Object.keys(clavesLocales).forEach(function(campo) {
++                    localStorage.setItem(clavesLocales[campo], contacto[campo]);
++                });
++                estado.textContent = 'No se guardó: ' + (error.message || 'error de conexión.') + ' Se conservó una copia local.';
++                estado.style.color = '#b91c1c';
++            } finally {
++                if (btn) {
++                    btn.disabled = false;
++                    btn.textContent = original;
++                }
++            }
+         }
+ 
+         // Publicar en la sección Inicio
+@@ -351,4 +495,4 @@
+         }
+     </script>
+ </body>
+-</html>
+\ No newline at end of file
++</html>
+diff --git a/index.html b/index.html
+index 7cdd0a2d4aa97a2f43d8696abfc4cac39871f43e..b7ffbe90ed8ede9bbfac2373e0d3dd72910ae1e5 100644
+--- a/index.html
++++ b/index.html
+@@ -47,7 +47,7 @@
+ 
+     <section id="vida" class="seccion-fija">
+         <div class="seccion-header"><h2>Vida de Alfredo Maneiro</h2></div>
+-        <div class="contenido-seccion">
++        <div id="contenido-vida" class="contenido-seccion" style="white-space:pre-wrap;">
+             <p><strong>Alfredo Maneiro González</strong> fue un político, filósofo y teórico venezolano, nacido en Caracas el 30 de enero de 1937 y fallecido el 24 de octubre de 1982.</p>
+             <p>Su pensamiento estuvo marcado por la búsqueda de nuevas formas de hacer política y por el análisis de la realidad social venezolana.</p>
+         </div>
+@@ -55,7 +55,7 @@
+ 
+     <section id="obra" class="seccion-fija">
+         <div class="seccion-header"><h2>Obra</h2></div>
+-        <div class="contenido-seccion">
++        <div id="contenido-obra" class="contenido-seccion" style="white-space:pre-wrap;">
+             <p>Espacio dedicado al análisis y difusión de los aportes teóricos y políticos de Alfredo Maneiro.</p>
+         </div>
+     </section>
+@@ -72,22 +72,17 @@
+ 
+     <section id="contacto-seccion" class="seccion-fija">
+         <div class="seccion-header"><h2>Contacto</h2></div>
+-        <form id="form-contacto" onsubmit="enviarMensajeContacto(event)" class="form-contacto-grid">
+-            <div class="form-fila">
+-                <label for="contacto-nombre">Nombre:</label>
+-                <input type="text" id="contacto-nombre" required placeholder="Tu nombre completo">
+-            </div>
+-            <div class="form-fila">
+-                <label for="contacto-correo">Correo electrónico:</label>
+-                <input type="email" id="contacto-correo" required placeholder="tucorreo@ejemplo.com">
+-            </div>
+-            <div class="form-fila">
+-                <label for="contacto-mensaje">Mensaje:</label>
+-                <textarea id="contacto-mensaje" required placeholder="Escribe tu mensaje aquí..."></textarea>
+-            </div>
+-            <button type="submit" class="btn-enviar-mensaje">Enviar mensaje</button>
+-        </form>
+-        <div id="mensaje-exito" class="mensaje-exito" style="display:none; color: green; margin-top: 10px;">¡Mensaje enviado con éxito!</div>
++        <div class="contacto-contenido">
++            <p id="estado-canales-contacto" class="contacto-vacio" aria-live="polite">Cargando canales de contacto...</p>
++            <section id="grupo-contacto-directo" class="contacto-grupo" hidden>
++                <h3>Contacto directo</h3>
++                <div id="canales-contacto-directo" class="contacto-grid"></div>
++            </section>
++            <section id="grupo-contacto-redes" class="contacto-grupo" hidden>
++                <h3>Redes sociales</h3>
++                <div id="canales-contacto-redes" class="contacto-grid"></div>
++            </section>
++        </div>
+     </section>
+ 
+     <main id="inicio" class="contenido-principal active">
+@@ -433,18 +428,155 @@
+             }
+         }
+ 
+-        function enviarMensajeContacto(event) {
+-            event.preventDefault();
+-            document.getElementById('mensaje-exito').style.display = 'block';
+-            document.getElementById('form-contacto').reset();
+-            setTimeout(function() {
+-                document.getElementById('mensaje-exito').style.display = 'none';
+-            }, 5000);
++        var iconosContacto = {
++            whatsapp: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.3 11.6a8.3 8.3 0 0 1-12.2 7.3L4 20l1.1-4a8.3 8.3 0 1 1 15.2-4.4Z"/><path d="M8.6 8.3c.4-.7.8-.5 1.1-.1l.8 1.3c.2.3.1.5-.1.8l-.5.6c.5 1 1.3 1.7 2.3 2.2l.6-.6c.2-.2.5-.3.8-.1l1.4.7c.3.2.4.5.2.9-.3.6-.9 1-1.6 1-1.8-.1-4.3-1.8-5.3-3.4-.7-1.1-.7-2.4.3-3.3Z"/></svg>',
++            email: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg>',
++            messenger: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 0 0-7.4 14.1L4 21l4.1-1.8A9 9 0 1 0 12 3Z"/><path d="m7.5 14.6 3.4-3.6 2.3 1.8 3.3-3.5-3.4 3.6-2.3-1.8-3.3 3.5Z"/></svg>',
++            tiktok: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3v11.2a3.6 3.6 0 1 1-3-3.5"/><path d="M14 3c.5 2.8 2.4 4.6 5.2 4.9"/></svg>'
++        };
++
++        function prepararEnlaceContacto(tipo, valor) {
++            valor = String(valor || '').trim();
++            if (!valor) return null;
++
++            if (tipo === 'whatsapp') {
++                if (!/^[0-9\s()+.\-]+$/.test(valor)) return null;
++                var digitos = valor.replace(/[^0-9]/g, '');
++                if (digitos.length < 7 || digitos.length > 15) return null;
++                return { href: 'https://wa.me/' + digitos, texto: valor, externo: true };
++            }
++
++            if (tipo === 'email') {
++                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valor)) return null;
++                var partesCorreo = valor.split('@');
++                return { href: 'mailto:' + encodeURIComponent(partesCorreo[0]) + '@' + encodeURIComponent(partesCorreo[1]), texto: valor, externo: false };
++            }
++
++            if (tipo === 'messenger') {
++                try {
++                    var enlaceMessenger = new URL(valor);
++                    var hostsMessenger = ['m.me', 'messenger.com', 'www.messenger.com'];
++                    if (enlaceMessenger.protocol !== 'https:' || !hostsMessenger.includes(enlaceMessenger.hostname) || !enlaceMessenger.pathname.slice(1)) return null;
++                    return { href: enlaceMessenger.href, texto: 'Abrir conversación', externo: true };
++                } catch (_error) {
++                    return null;
++                }
++            }
++
++            if (tipo === 'tiktok') {
++                var usuarioTikTok = valor.replace(/^@/, '');
++                if (/^https?:\/\//i.test(valor)) {
++                    try {
++                        var enlaceTikTok = new URL(valor);
++                        var hostsTikTok = ['tiktok.com', 'www.tiktok.com'];
++                        var coincidencia = enlaceTikTok.pathname.match(/^\/@([A-Za-z0-9._]{2,24})\/?$/);
++                        if (enlaceTikTok.protocol !== 'https:' || !hostsTikTok.includes(enlaceTikTok.hostname) || !coincidencia) return null;
++                        usuarioTikTok = coincidencia[1];
++                    } catch (_error) {
++                        return null;
++                    }
++                }
++                if (!/^[A-Za-z0-9._]{2,24}$/.test(usuarioTikTok)) return null;
++                return { href: 'https://www.tiktok.com/@' + encodeURIComponent(usuarioTikTok), texto: '@' + usuarioTikTok, externo: true };
++            }
++
++            return null;
++        }
++
++        function crearTarjetaContacto(tipo, etiqueta, valor) {
++            var enlace = prepararEnlaceContacto(tipo, valor);
++            if (!enlace) return null;
++
++            var tarjeta = document.createElement('a');
++            tarjeta.className = 'contacto-card contacto-' + tipo;
++            tarjeta.href = enlace.href;
++            tarjeta.setAttribute('aria-label', etiqueta + ': ' + enlace.texto);
++            if (enlace.externo) {
++                tarjeta.target = '_blank';
++                tarjeta.rel = 'noopener noreferrer';
++            }
++
++            var icono = document.createElement('span');
++            icono.className = 'contacto-icono';
++            icono.setAttribute('aria-hidden', 'true');
++            icono.innerHTML = iconosContacto[tipo];
++
++            var texto = document.createElement('span');
++            texto.className = 'contacto-texto';
++            var titulo = document.createElement('strong');
++            titulo.textContent = etiqueta;
++            var detalle = document.createElement('span');
++            detalle.textContent = enlace.texto;
++            texto.append(titulo, detalle);
++            tarjeta.append(icono, texto);
++            return tarjeta;
++        }
++
++        async function renderizarContactoPublico() {
++            var estado = document.getElementById('estado-canales-contacto');
++            var grupoDirecto = document.getElementById('grupo-contacto-directo');
++            var grupoRedes = document.getElementById('grupo-contacto-redes');
++            var directo = document.getElementById('canales-contacto-directo');
++            var redes = document.getElementById('canales-contacto-redes');
++            directo.replaceChildren();
++            redes.replaceChildren();
++
++            try {
++                var response = await fetch('/api/contacto-publico', { cache: 'no-store' });
++                var resultado = await response.json();
++                if (!response.ok || !resultado.success) throw new Error(resultado.error || 'No se pudo cargar Contacto.');
++
++                var contacto = resultado.contacto || {};
++                [
++                    ['whatsapp', 'WhatsApp', contacto.whatsapp],
++                    ['email', 'Correo electrónico', contacto.email],
++                    ['messenger', 'Facebook Messenger', contacto.messenger_url]
++                ].forEach(function(canal) {
++                    var tarjeta = crearTarjetaContacto(canal[0], canal[1], canal[2]);
++                    if (tarjeta) directo.appendChild(tarjeta);
++                });
++                var tarjetaTikTok = crearTarjetaContacto('tiktok', 'TikTok', contacto.tiktok_handle);
++                if (tarjetaTikTok) redes.appendChild(tarjetaTikTok);
++
++                grupoDirecto.hidden = directo.children.length === 0;
++                grupoRedes.hidden = redes.children.length === 0;
++                var hayCanales = directo.children.length + redes.children.length > 0;
++                estado.hidden = hayCanales;
++                estado.textContent = hayCanales ? '' : 'Aún no hay canales de contacto configurados.';
++            } catch (error) {
++                grupoDirecto.hidden = true;
++                grupoRedes.hidden = true;
++                estado.hidden = false;
++                estado.textContent = 'No se pudo cargar la información de contacto. Intenta recargar la página.';
++                console.error('Error al cargar los canales de contacto:', error);
++            }
+         }
+ 
+         var realtimeActivo = false;
+ 
++        async function renderizarSeccionesEditoriales() {
++            try {
++                var response = await fetch('/api/secciones', { cache: 'no-store' });
++                if (!response.ok) throw new Error('HTTP ' + response.status);
++                var resultado = await response.json();
++                if (!resultado.success) throw new Error(resultado.error || 'Error al cargar las secciones.');
++
++                var contenido = resultado.secciones || {};
++                ['vida', 'obra'].forEach(function(seccion) {
++                    var destino = document.getElementById('contenido-' + seccion);
++                    var texto = contenido[seccion];
++                    if (destino && typeof texto === 'string') {
++                        destino.textContent = texto.trim() ? texto : 'Aún no hay contenido publicado.';
++                    }
++                });
++            } catch (error) {
++                console.error('No se pudo cargar el contenido editorial:', error);
++            }
++        }
++
+         function actualizarContenidoPublico() {
++            renderizarSeccionesEditoriales();
++            renderizarContactoPublico();
+             renderizarNoticias();
+             renderizarGaleria('fotos', 'galeria-fotos', 'image');
+             renderizarGaleria('videos', 'galeria-videos', 'video');
+@@ -481,6 +613,16 @@
+                         schema: 'public',
+                         table: 'comentarios'
+                     }, actualizarComentariosPublicos)
++                    .on('postgres_changes', {
++                        event: '*',
++                        schema: 'public',
++                        table: 'contenido_secciones'
++                    }, renderizarSeccionesEditoriales)
++                    .on('postgres_changes', {
++                        event: '*',
++                        schema: 'public',
++                        table: 'contacto_publico'
++                    }, renderizarContactoPublico)
+                     .subscribe(function(estado) {
+                         realtimeActivo = estado === 'SUBSCRIBED';
+                     });
+@@ -501,4 +643,4 @@
+         });
+     </script>
+ </body>
+-</html>
+\ No newline at end of file
++</html>
+diff --git a/migrations/20261002_contacto_publico.sql b/migrations/20261002_contacto_publico.sql
+new file mode 100644
+index 0000000000000000000000000000000000000000..b806d99c65c2a1f436121eafea98042e6ba57d87
+--- /dev/null
++++ b/migrations/20261002_contacto_publico.sql
+@@ -0,0 +1,40 @@
++create table if not exists public.contacto_publico (
++    id smallint primary key default 1 check (id = 1),
++    whatsapp text not null default '' check (char_length(whatsapp) <= 32),
++    email text not null default '' check (char_length(email) <= 254),
++    messenger_url text not null default '' check (char_length(messenger_url) <= 2048),
++    tiktok_handle text not null default '' check (char_length(tiktok_handle) <= 24),
++    updated_at timestamptz not null default now()
++);
++
++alter table public.contacto_publico enable row level security;
++
++drop policy if exists "Canales públicos de contacto visibles para visitantes"
++    on public.contacto_publico;
++create policy "Canales públicos de contacto visibles para visitantes"
++    on public.contacto_publico
++    for select
++    to anon, authenticated
++    using (true);
++
++revoke all on table public.contacto_publico from public, anon, authenticated;
++grant select on public.contacto_publico to anon, authenticated;
++grant all on public.contacto_publico to service_role;
++
++do $$
++begin
++    if exists (
++        select 1
++        from pg_publication
++        where pubname = 'supabase_realtime'
++    ) and not exists (
++        select 1
++        from pg_publication_tables
++        where pubname = 'supabase_realtime'
++          and schemaname = 'public'
++          and tablename = 'contacto_publico'
++    ) then
++        execute 'alter publication supabase_realtime add table public.contacto_publico';
++    end if;
++end;
++$$;
+diff --git a/migrations/20261002_contenido_secciones.sql b/migrations/20261002_contenido_secciones.sql
+new file mode 100644
+index 0000000000000000000000000000000000000000..c95bdb793b04a84c5d79fa396b16a44340230e68
+--- /dev/null
++++ b/migrations/20261002_contenido_secciones.sql
+@@ -0,0 +1,37 @@
++create table if not exists public.contenido_secciones (
++    seccion text primary key check (seccion in ('vida', 'obra')),
++    contenido text not null default '',
++    updated_at timestamptz not null default now()
++);
++
++alter table public.contenido_secciones enable row level security;
++
++drop policy if exists "Contenido editorial visible para visitantes"
++    on public.contenido_secciones;
++create policy "Contenido editorial visible para visitantes"
++    on public.contenido_secciones
++    for select
++    to anon, authenticated
++    using (true);
++
++revoke all on table public.contenido_secciones from public, anon, authenticated;
++grant select on public.contenido_secciones to anon, authenticated;
++grant all on public.contenido_secciones to service_role;
++
++do $$
++begin
++    if exists (
++        select 1
++        from pg_publication
++        where pubname = 'supabase_realtime'
++    ) and not exists (
++        select 1
++        from pg_publication_tables
++        where pubname = 'supabase_realtime'
++          and schemaname = 'public'
++          and tablename = 'contenido_secciones'
++    ) then
++        execute 'alter publication supabase_realtime add table public.contenido_secciones';
++    end if;
++end;
++$$;
+diff --git a/servidor.py b/servidor.py
+index a40b8b50888316e91da2e98e5a4280c58524ea34..c2537f0f6db126f7f21b5a4abf17c2ef4f1e6d6b 100644
+--- a/servidor.py
++++ b/servidor.py
+@@ -4,10 +4,10 @@ import uuid
+ import re
+ from datetime import datetime, timezone
+ from functools import wraps
+-from pathlib import Path
+-from collections.abc import Sequence
+-from typing import Any
+-from urllib.parse import quote
++from pathlib import Path
++from collections.abc import Sequence
++from typing import Any
++from urllib.parse import quote, urlparse
+ 
+ from flask import Flask, jsonify, request, send_from_directory
+ import httpx
+@@ -24,10 +24,11 @@ if SUPABASE_URL.endswith("/rest/v1"):
+ SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY")
+ SUPABASE_WRITE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+ SUPABASE_READ_KEY = SUPABASE_ANON_KEY
+-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
+-SUPABASE_STORAGE_BUCKET = os.environ.get("SUPABASE_STORAGE_BUCKET", "media")
+-MAX_UPLOAD_BYTES = 100 * 1024 * 1024
+-app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_BYTES
++ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
++SUPABASE_STORAGE_BUCKET = os.environ.get("SUPABASE_STORAGE_BUCKET", "media")
++SECCIONES_EDITORIALES = {"vida", "obra"}
++MAX_UPLOAD_BYTES = 100 * 1024 * 1024
++app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_BYTES
+ 
+ SUPABASE_CONFIG_ERROR = None
+ supabase = None
+@@ -72,11 +73,72 @@ ALLOWED_MEDIA = {
+ }
+ 
+ 
+-def respuesta_error(mensaje, estado):
+-    return jsonify({"success": False, "error": mensaje}), estado
+-
+-
+-def encabezados_supabase_admin():
++def respuesta_error(mensaje, estado):
++    return jsonify({"success": False, "error": mensaje}), estado
++
++
++def normalizar_contacto_publico(datos):
++    limites = {
++        "whatsapp": 32,
++        "email": 254,
++        "messenger_url": 2048,
++        "tiktok_handle": 2048,
++    }
++    contacto = {}
++    for campo, maximo in limites.items():
++        valor = datos.get(campo, "")
++        if valor is None:
++            valor = ""
++        if not isinstance(valor, str):
++            raise ValueError("Todos los canales deben enviarse como texto.")
++        valor = valor.strip()
++        if len(valor) > maximo:
++            raise ValueError(f"El campo {campo} supera el límite permitido.")
++        contacto[campo] = valor
++
++    whatsapp = contacto["whatsapp"]
++    if whatsapp:
++        if not re.fullmatch(r"[0-9\s()+.\-]+", whatsapp):
++            raise ValueError("El WhatsApp solo puede contener números y separadores telefónicos.")
++        digitos = re.sub(r"[^0-9]", "", whatsapp)
++        if not 7 <= len(digitos) <= 15:
++            raise ValueError("El número de WhatsApp debe tener entre 7 y 15 dígitos.")
++
++    email = contacto["email"]
++    if email and not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", email):
++        raise ValueError("Ingresa un correo electrónico válido.")
++
++    messenger_url = contacto["messenger_url"]
++    if messenger_url:
++        parsed = urlparse(messenger_url)
++        dominios_messenger = {"m.me", "messenger.com", "www.messenger.com"}
++        if (
++            parsed.scheme != "https"
++            or parsed.netloc.lower() not in dominios_messenger
++            or not parsed.path.strip("/")
++        ):
++            raise ValueError("Messenger debe ser un enlace HTTPS de m.me o messenger.com.")
++
++    tiktok = contacto["tiktok_handle"]
++    if tiktok:
++        if tiktok.startswith(("https://", "http://")):
++            parsed = urlparse(tiktok)
++            if parsed.scheme != "https" or parsed.netloc.lower() not in {"tiktok.com", "www.tiktok.com"}:
++                raise ValueError("TikTok debe ser un usuario o un enlace seguro de tiktok.com.")
++            coincidencia = re.fullmatch(r"/@([A-Za-z0-9._]{2,24})/?", parsed.path)
++            if not coincidencia:
++                raise ValueError("El enlace de TikTok debe apuntar a un perfil (@usuario).")
++            tiktok = coincidencia.group(1)
++        else:
++            tiktok = tiktok.removeprefix("@").strip()
++        if not re.fullmatch(r"[A-Za-z0-9._]{2,24}", tiktok):
++            raise ValueError("Ingresa un usuario de TikTok válido, por ejemplo @tu_usuario.")
++        contacto["tiktok_handle"] = tiktok
++
++    return contacto
++
++
++def encabezados_supabase_admin():
+     if not SUPABASE_WRITE_KEY:
+         raise RuntimeError("Falta una clave Supabase con permisos de escritura.")
+     headers = {"apikey": SUPABASE_WRITE_KEY}
+@@ -188,18 +250,146 @@ def panel_admin():
+     return send_from_directory(app.root_path, "admin.html")
+ 
+ 
+-@app.route("/api/public-config")
+-def configuracion_publica():
+-    return jsonify({
+-        "success": True,
+-        "realtimeEnabled": bool(SUPABASE_ANON_KEY and SUPABASE_URL),
+-        "supabaseUrl": SUPABASE_URL,
+-        "supabaseAnonKey": SUPABASE_ANON_KEY,
+-    })
+-
+-
+-@app.route("/assets/<path:filename>")
+-def servir_asset(filename):
++@app.route("/api/public-config")
++def configuracion_publica():
++    return jsonify({
++        "success": True,
++        "realtimeEnabled": bool(SUPABASE_ANON_KEY and SUPABASE_URL),
++        "supabaseUrl": SUPABASE_URL,
++        "supabaseAnonKey": SUPABASE_ANON_KEY,
++    })
++
++
++@app.route("/api/secciones", methods=["GET"])
++def obtener_contenido_secciones():
++    if supabase is None:
++        return respuesta_error(
++            SUPABASE_CONFIG_ERROR or "Supabase no está configurado.", 503
++        )
++
++    try:
++        filas = (
++            supabase.table("contenido_secciones")
++            .select("seccion,contenido,updated_at")
++            .in_("seccion", sorted(SECCIONES_EDITORIALES))
++            .execute()
++            .data
++        )
++        contenido = {seccion: None for seccion in SECCIONES_EDITORIALES}
++        for fila in filas:
++            seccion = fila.get("seccion")
++            if seccion in SECCIONES_EDITORIALES:
++                contenido[seccion] = fila.get("contenido") or ""
++        return jsonify({"success": True, "secciones": contenido})
++    except Exception:
++        app.logger.exception("No se pudo cargar el contenido editorial")
++        return respuesta_error("No se pudo cargar el contenido de las secciones.", 500)
++
++
++@app.route("/api/secciones/<seccion>", methods=["PUT"])
++@requiere_admin
++def actualizar_contenido_seccion(seccion):
++    if seccion not in SECCIONES_EDITORIALES:
++        return respuesta_error("Sección editorial no válida.", 404)
++
++    datos = request.get_json(silent=True) or {}
++    contenido = datos.get("contenido")
++    if not isinstance(contenido, str):
++        return respuesta_error("El contenido debe ser texto.", 400)
++    if len(contenido) > 100000:
++        return respuesta_error("El texto supera el límite de 100 000 caracteres.", 413)
++
++    actualizado = datetime.now(timezone.utc).isoformat()
++    fila = {"seccion": seccion, "contenido": contenido, "updated_at": actualizado}
++    try:
++        if SUPABASE_WRITE_KEY and SUPABASE_WRITE_KEY.startswith("sb_secret_"):
++            filas = solicitar_supabase_admin(
++                "POST",
++                "contenido_secciones",
++                params={"on_conflict": "seccion"},
++                json=fila,
++                prefer="resolution=merge-duplicates,return=representation",
++            )
++        else:
++            filas = (
++                supabase_admin.table("contenido_secciones")
++                .upsert(fila, on_conflict="seccion")
++                .execute()
++                .data
++            )
++        guardada = filas[0] if filas else fila
++        return jsonify({
++            "success": True,
++            "seccion": seccion,
++            "contenido": guardada.get("contenido", contenido),
++            "updated_at": guardada.get("updated_at", actualizado),
++        })
++    except Exception:
++        app.logger.exception("No se pudo guardar el contenido editorial")
++        return respuesta_error("No se pudo guardar el contenido de la sección.", 500)
++
++
++@app.route("/api/contacto-publico", methods=["GET"])
++def obtener_contacto_publico():
++    if supabase is None:
++        return respuesta_error(
++            SUPABASE_CONFIG_ERROR or "Supabase no está configurado.", 503
++        )
++
++    try:
++        filas = (
++            supabase.table("contacto_publico")
++            .select("whatsapp,email,messenger_url,tiktok_handle,updated_at")
++            .eq("id", 1)
++            .limit(1)
++            .execute()
++            .data
++        )
++        return jsonify({"success": True, "contacto": filas[0] if filas else None})
++    except Exception:
++        app.logger.exception("No se pudo cargar la información pública de contacto")
++        return respuesta_error("No se pudo cargar la información de contacto.", 500)
++
++
++@app.route("/api/contacto-publico", methods=["PUT"])
++@requiere_admin
++def actualizar_contacto_publico():
++    datos = request.get_json(silent=True)
++    if not isinstance(datos, dict):
++        return respuesta_error("Envía los canales de contacto en formato JSON.", 400)
++
++    try:
++        contacto = normalizar_contacto_publico(datos)
++    except ValueError as error:
++        return respuesta_error(str(error), 400)
++
++    actualizado = datetime.now(timezone.utc).isoformat()
++    fila = {"id": 1, **contacto, "updated_at": actualizado}
++    try:
++        if SUPABASE_WRITE_KEY and SUPABASE_WRITE_KEY.startswith("sb_secret_"):
++            filas = solicitar_supabase_admin(
++                "POST",
++                "contacto_publico",
++                params={"on_conflict": "id"},
++                json=fila,
++                prefer="resolution=merge-duplicates,return=representation",
++            )
++        else:
++            filas = (
++                supabase_admin.table("contacto_publico")
++                .upsert(fila, on_conflict="id")
++                .execute()
++                .data
++            )
++        guardada = filas[0] if filas else fila
++        return jsonify({"success": True, "contacto": guardada})
++    except Exception:
++        app.logger.exception("No se pudo guardar la información pública de contacto")
++        return respuesta_error("No se pudo guardar la información de contacto.", 500)
++
++
++@app.route("/assets/<path:filename>")
++def servir_asset(filename):
+     if filename not in PUBLIC_ASSETS:
+         return respuesta_error("Recurso no encontrado.", 404)
+     return send_from_directory(app.root_path, filename)
+@@ -486,4 +676,4 @@ def eliminar_publicacion(publicacion_id):
+         return jsonify({"success": True})
+     except Exception as error:
+         app.logger.exception("No se pudo eliminar la publicación")
+-        return respuesta_error(str(error), 500)
+\ No newline at end of file
++        return respuesta_error(str(error), 500)
+diff --git a/style.css b/style.css
+index fa1967b131acbfb2d8ff08b835cc8fdbc03f9b9c..523678e1f1fb2e873c305c82e8215bb542c2edcf 100644
+--- a/style.css
++++ b/style.css
+@@ -635,6 +635,115 @@ body {
+     text-align: center;
+ }
+ 
++.contacto-contenido {
++    display: grid;
++    gap: 20px;
++}
++
++.contacto-grupo {
++    padding: 22px;
++    background: #ffffff;
++    border: 1px solid #e2e8f0;
++    border-radius: 12px;
++    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
++}
++
++.contacto-grupo h3 {
++    margin-bottom: 14px;
++    color: #0b1f4d;
++    font-size: 17px;
++}
++
++.contacto-grid {
++    display: grid;
++    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
++    gap: 12px;
++}
++
++.contacto-card {
++    min-width: 0;
++    display: flex;
++    align-items: center;
++    gap: 13px;
++    padding: 14px;
++    color: #334155;
++    background: #f8fafc;
++    border: 1px solid #e2e8f0;
++    border-radius: 10px;
++    text-decoration: none;
++    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
++}
++
++.contacto-card:hover,
++.contacto-card:focus-visible {
++    transform: translateY(-2px);
++    border-color: #93c5fd;
++    box-shadow: 0 5px 14px rgba(15, 23, 42, 0.1);
++    outline: none;
++}
++
++.contacto-icono {
++    flex: 0 0 46px;
++    width: 46px;
++    height: 46px;
++    display: grid;
++    place-items: center;
++    color: #1e3a8a;
++    background: #dbeafe;
++    border-radius: 50%;
++}
++
++.contacto-icono svg {
++    width: 25px;
++    height: 25px;
++    fill: none;
++    stroke: currentColor;
++    stroke-width: 1.8;
++    stroke-linecap: round;
++    stroke-linejoin: round;
++}
++
++.contacto-whatsapp .contacto-icono {
++    color: #15803d;
++    background: #dcfce7;
++}
++
++.contacto-messenger .contacto-icono {
++    color: #2563eb;
++    background: #dbeafe;
++}
++
++.contacto-tiktok .contacto-icono {
++    color: #111827;
++    background: #e5e7eb;
++}
++
++.contacto-texto {
++    min-width: 0;
++    display: grid;
++    gap: 2px;
++}
++
++.contacto-texto strong {
++    color: #0b1f4d;
++    font-size: 14px;
++}
++
++.contacto-texto span {
++    overflow-wrap: anywhere;
++    color: #64748b;
++    font-size: 13px;
++}
++
++.contacto-vacio {
++    padding: 20px;
++    color: #64748b;
++    background: #f8fafc;
++    border: 1px dashed #cbd5e1;
++    border-radius: 10px;
++    text-align: center;
++}
++
+ /* ==========================================================
+    FOOTER INSTITUCIONAL
+    ========================================================== */
+diff --git a/supabase_setup.sql b/supabase_setup.sql
+index 72e798d84381b974759e84961866885c2d21cff7..4b5c3675e32c594571d3a6ef64cd937f84fc3ce9 100644
+--- a/supabase_setup.sql
++++ b/supabase_setup.sql
+@@ -38,10 +38,89 @@ create policy "Publicaciones visibles para visitantes"
+     to anon, authenticated
+     using (true);
+ 
+-create index if not exists publicaciones_seccion_fecha_idx
+-    on public.publicaciones (seccion, fecha desc);
+-
+-create table if not exists public.comentarios (
++create index if not exists publicaciones_seccion_fecha_idx
++    on public.publicaciones (seccion, fecha desc);
++
++create table if not exists public.contenido_secciones (
++    seccion text primary key check (seccion in ('vida', 'obra')),
++    contenido text not null default '',
++    updated_at timestamptz not null default now()
++);
++
++alter table public.contenido_secciones enable row level security;
++
++drop policy if exists "Contenido editorial visible para visitantes"
++    on public.contenido_secciones;
++create policy "Contenido editorial visible para visitantes"
++    on public.contenido_secciones
++    for select
++    to anon, authenticated
++    using (true);
++
++revoke all on table public.contenido_secciones from public, anon, authenticated;
++grant select on public.contenido_secciones to anon, authenticated;
++grant all on public.contenido_secciones to service_role;
++
++do $$
++begin
++    if exists (
++        select 1
++        from pg_publication
++        where pubname = 'supabase_realtime'
++    ) and not exists (
++        select 1
++        from pg_publication_tables
++        where pubname = 'supabase_realtime'
++          and schemaname = 'public'
++          and tablename = 'contenido_secciones'
++    ) then
++        execute 'alter publication supabase_realtime add table public.contenido_secciones';
++    end if;
++end;
++$$;
++
++create table if not exists public.contacto_publico (
++    id smallint primary key default 1 check (id = 1),
++    whatsapp text not null default '' check (char_length(whatsapp) <= 32),
++    email text not null default '' check (char_length(email) <= 254),
++    messenger_url text not null default '' check (char_length(messenger_url) <= 2048),
++    tiktok_handle text not null default '' check (char_length(tiktok_handle) <= 24),
++    updated_at timestamptz not null default now()
++);
++
++alter table public.contacto_publico enable row level security;
++
++drop policy if exists "Canales públicos de contacto visibles para visitantes"
++    on public.contacto_publico;
++create policy "Canales públicos de contacto visibles para visitantes"
++    on public.contacto_publico
++    for select
++    to anon, authenticated
++    using (true);
++
++revoke all on table public.contacto_publico from public, anon, authenticated;
++grant select on public.contacto_publico to anon, authenticated;
++grant all on public.contacto_publico to service_role;
++
++do $$
++begin
++    if exists (
++        select 1
++        from pg_publication
++        where pubname = 'supabase_realtime'
++    ) and not exists (
++        select 1
++        from pg_publication_tables
++        where pubname = 'supabase_realtime'
++          and schemaname = 'public'
++          and tablename = 'contacto_publico'
++    ) then
++        execute 'alter publication supabase_realtime add table public.contacto_publico';
++    end if;
++end;
++$$;
++
++create table if not exists public.comentarios (
+     id uuid primary key default gen_random_uuid(),
+     publicacion_id text not null references public.publicaciones(id) on delete cascade,
+     nombre text not null default 'Visitante' check (char_length(nombre) <= 80),
+@@ -115,4 +194,4 @@ begin
+         execute 'alter publication supabase_realtime add table public.comentarios';
+     end if;
+ end;
+-$$;
+\ No newline at end of file
++$$;
+diff --git a/tests/test_contact_api.py b/tests/test_contact_api.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..e7a15e149950ac98f807f73ccee971ca82f30811
+--- /dev/null
++++ b/tests/test_contact_api.py
+@@ -0,0 +1,145 @@
++import os
++import sys
++import unittest
++from pathlib import Path
++from types import SimpleNamespace
++
++
++ROOT = Path(__file__).resolve().parents[1]
++sys.path.insert(0, str(ROOT))
++
++# Use dummy values so tests never contact a real Supabase project.
++os.environ["SUPABASE_URL"] = "https://example.supabase.co"
++os.environ["SUPABASE_ANON_KEY"] = "test-anon-key"
++os.environ["SUPABASE_SERVICE_ROLE_KEY"] = "test-service-role-key"
++os.environ["ADMIN_PASSWORD"] = "test-admin-password"
++
++import servidor  # noqa: E402
++
++
++class FakeDatabase:
++    def __init__(self):
++        self.records = {}
++
++    def table(self, name):
++        if name != "contacto_publico":
++            raise AssertionError("Unexpected table: " + name)
++        return FakeQuery(self, name)
++
++
++class FakeQuery:
++    def __init__(self, database, table_name):
++        self.database = database
++        self.table_name = table_name
++        self.filters = {}
++        self.upsert_row = None
++
++    def select(self, _columns):
++        return self
++
++    def eq(self, column, value):
++        self.filters[column] = value
++        return self
++
++    def limit(self, _limit):
++        return self
++
++    def upsert(self, row, on_conflict=None):
++        if on_conflict != "id":
++            raise AssertionError("Unexpected conflict target")
++        self.upsert_row = row
++        return self
++
++    def execute(self):
++        table = self.database.records.setdefault(self.table_name, {})
++        if self.upsert_row is not None:
++            row = dict(self.upsert_row)
++            table[row["id"]] = row
++            return SimpleNamespace(data=[row])
++
++        rows = list(table.values())
++        for column, value in self.filters.items():
++            rows = [row for row in rows if row.get(column) == value]
++        return SimpleNamespace(data=rows)
++
++
++class PublicContactApiTests(unittest.TestCase):
++    def setUp(self):
++        self.database = FakeDatabase()
++        servidor.supabase = self.database
++        servidor.supabase_admin = self.database
++        servidor.SUPABASE_CONFIG_ERROR = None
++        servidor.SUPABASE_WRITE_KEY = "test-service-role-key"
++        servidor.ADMIN_PASSWORD = "test-admin-password"
++        self.client = servidor.app.test_client()
++
++    def test_public_read_returns_null_until_configured(self):
++        response = self.client.get("/api/contacto-publico")
++        self.assertEqual(response.status_code, 200)
++        self.assertEqual(response.get_json(), {"success": True, "contacto": None})
++
++    def test_write_requires_admin_password(self):
++        response = self.client.put(
++            "/api/contacto-publico",
++            json={"whatsapp": "+58 412 123 4567"},
++        )
++        self.assertEqual(response.status_code, 401)
++        self.assertEqual(self.database.records, {})
++
++    def test_admin_can_save_channels_and_public_can_read_them(self):
++        payload = {
++            "whatsapp": "+58 412 123 4567",
++            "email": "contacto@ejemplo.org",
++            "messenger_url": "https://m.me/PortalAlfredo",
++            "tiktok_handle": "@portal_alfredo",
++        }
++        response = self.client.put(
++            "/api/contacto-publico",
++            json=payload,
++            headers={"X-Admin-Password": "test-admin-password"},
++        )
++        self.assertEqual(response.status_code, 200)
++        self.assertTrue(response.get_json()["success"])
++        self.assertEqual(response.get_json()["contacto"]["tiktok_handle"], "portal_alfredo")
++
++        public_response = self.client.get("/api/contacto-publico")
++        self.assertEqual(public_response.status_code, 200)
++        contact = public_response.get_json()["contacto"]
++        self.assertEqual(contact["whatsapp"], payload["whatsapp"])
++        self.assertEqual(contact["email"], payload["email"])
++        self.assertEqual(contact["messenger_url"], payload["messenger_url"])
++        self.assertEqual(contact["tiktok_handle"], "portal_alfredo")
++
++    def test_rejects_invalid_email_messenger_and_tiktok(self):
++        headers = {"X-Admin-Password": "test-admin-password"}
++        bad_email = self.client.put(
++            "/api/contacto-publico", json={"email": "not-an-email"}, headers=headers
++        )
++        bad_messenger = self.client.put(
++            "/api/contacto-publico",
++            json={"messenger_url": "https://example.com/chat"},
++            headers=headers,
++        )
++        bad_tiktok = self.client.put(
++            "/api/contacto-publico", json={"tiktok_handle": "not a handle"}, headers=headers
++        )
++        self.assertEqual(bad_email.status_code, 400)
++        self.assertEqual(bad_messenger.status_code, 400)
++        self.assertEqual(bad_tiktok.status_code, 400)
++        self.assertEqual(self.database.records, {})
++
++    def test_rejects_short_whatsapp_and_non_text_values(self):
++        headers = {"X-Admin-Password": "test-admin-password"}
++        short_number = self.client.put(
++            "/api/contacto-publico", json={"whatsapp": "1234"}, headers=headers
++        )
++        non_text = self.client.put(
++            "/api/contacto-publico", json={"email": ["a@example.org"]}, headers=headers
++        )
++        self.assertEqual(short_number.status_code, 400)
++        self.assertEqual(non_text.status_code, 400)
++        self.assertEqual(self.database.records, {})
++
++
++if __name__ == "__main__":
++    unittest.main()
+diff --git a/tests/test_editorial_sections.py b/tests/test_editorial_sections.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..dcefb6c6455502eed4ba3244bf6e13ecc0b6ce27
+--- /dev/null
++++ b/tests/test_editorial_sections.py
+@@ -0,0 +1,125 @@
++import os
++import sys
++import unittest
++from pathlib import Path
++from types import SimpleNamespace
++
++
++ROOT = Path(__file__).resolve().parents[1]
++sys.path.insert(0, str(ROOT))
++
++# Use dummy values so tests never contact a real Supabase project.
++os.environ["SUPABASE_URL"] = "https://example.supabase.co"
++os.environ["SUPABASE_ANON_KEY"] = "test-anon-key"
++os.environ["SUPABASE_SERVICE_ROLE_KEY"] = "test-service-role-key"
++os.environ["ADMIN_PASSWORD"] = "test-admin-password"
++
++import servidor  # noqa: E402
++
++
++class FakeDatabase:
++    def __init__(self):
++        self.records = {}
++
++    def table(self, name):
++        if name != "contenido_secciones":
++            raise AssertionError("Unexpected table: " + name)
++        return FakeQuery(self)
++
++
++class FakeQuery:
++    def __init__(self, database):
++        self.database = database
++        self.allowed_sections = None
++        self.upsert_row = None
++
++    def select(self, _columns):
++        return self
++
++    def in_(self, _column, values):
++        self.allowed_sections = set(values)
++        return self
++
++    def upsert(self, row, on_conflict=None):
++        if on_conflict != "seccion":
++            raise AssertionError("Unexpected conflict target")
++        self.upsert_row = row
++        return self
++
++    def execute(self):
++        if self.upsert_row is not None:
++            row = dict(self.upsert_row)
++            self.database.records[row["seccion"]] = row
++            return SimpleNamespace(data=[row])
++
++        rows = list(self.database.records.values())
++        if self.allowed_sections is not None:
++            rows = [row for row in rows if row["seccion"] in self.allowed_sections]
++        return SimpleNamespace(data=rows)
++
++
++class EditorialSectionsApiTests(unittest.TestCase):
++    def setUp(self):
++        self.database = FakeDatabase()
++        servidor.supabase = self.database
++        servidor.supabase_admin = self.database
++        servidor.SUPABASE_CONFIG_ERROR = None
++        servidor.SUPABASE_WRITE_KEY = "test-service-role-key"
++        servidor.ADMIN_PASSWORD = "test-admin-password"
++        self.client = servidor.app.test_client()
++
++    def test_public_read_returns_both_sections(self):
++        response = self.client.get("/api/secciones")
++        self.assertEqual(response.status_code, 200)
++        self.assertEqual(response.get_json(), {
++            "success": True,
++            "secciones": {"vida": None, "obra": None},
++        })
++
++    def test_public_read_returns_saved_text(self):
++        self.database.records["vida"] = {
++            "seccion": "vida",
++            "contenido": "Biografía actualizada",
++            "updated_at": "2026-10-02T00:00:00+00:00",
++        }
++        response = self.client.get("/api/secciones")
++        self.assertEqual(response.status_code, 200)
++        self.assertEqual(response.get_json()["secciones"]["vida"], "Biografía actualizada")
++        self.assertIsNone(response.get_json()["secciones"]["obra"])
++
++    def test_write_requires_admin_password(self):
++        response = self.client.put("/api/secciones/vida", json={"contenido": "No autorizado"})
++        self.assertEqual(response.status_code, 401)
++        self.assertEqual(self.database.records, {})
++
++    def test_admin_can_save_and_public_can_read(self):
++        response = self.client.put(
++            "/api/secciones/obra",
++            json={"contenido": "Pensamiento y legado\nSegundo párrafo."},
++            headers={"X-Admin-Password": "test-admin-password"},
++        )
++        self.assertEqual(response.status_code, 200)
++        self.assertTrue(response.get_json()["success"])
++
++        public_response = self.client.get("/api/secciones")
++        self.assertEqual(public_response.status_code, 200)
++        self.assertEqual(
++            public_response.get_json()["secciones"]["obra"],
++            "Pensamiento y legado\nSegundo párrafo.",
++        )
++
++    def test_rejects_unknown_section_and_non_text_content(self):
++        headers = {"X-Admin-Password": "test-admin-password"}
++        unknown = self.client.put(
++            "/api/secciones/videos", json={"contenido": "x"}, headers=headers
++        )
++        invalid = self.client.put(
++            "/api/secciones/vida", json={"contenido": ["no", "text"]}, headers=headers
++        )
++        self.assertEqual(unknown.status_code, 404)
++        self.assertEqual(invalid.status_code, 400)
++        self.assertEqual(self.database.records, {})
++
++
++if __name__ == "__main__":
++    unittest.main()
