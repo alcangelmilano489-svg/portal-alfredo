@@ -56,7 +56,8 @@ app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_BYTES
 # Secciones fijas editoriales de la página
 SECCIONES_EDITORIALES: Set[str] = {
     "vida",
-    "obra"
+    "obra",
+    "inicio"
 }
 
 
@@ -658,7 +659,7 @@ def verificar_admin() -> Any:
 
 
 # ============================================================
-# SECCIONES EDITORIALES (VIDA / OBRA) - TEXTO Y DOCUMENTOS
+# SECCIONES EDITORIALES (VIDA / OBRA / INICIO) - TEXTO Y DOCUMENTOS
 # ============================================================
 
 @app.route(
@@ -729,7 +730,7 @@ def obtener_contenido_secciones() -> Any:
 
 
 # ============================================================
-# ACTUALIZAR SECCIÓN (VIDA / OBRA)
+# ACTUALIZAR SECCIÓN (VIDA / OBRA / INICIO)
 # ============================================================
 
 @app.route(
@@ -899,9 +900,5 @@ def actualizar_contenido_seccion(
         })
 
     except Exception as error:
-
-        app.logger.exception(
-            "No se pudo guardar el contenido editorial."
-        )
-
-        return
+        app.logger.exception("No se pudo guardar el contenido editorial.")
+        return respuesta_error(str(error), 500)
