@@ -18,8 +18,18 @@
         .btn-eliminar { background: #ef4444; color: white; border: none; padding: 6px 12px; font-size: 12px; border-radius: 4px; cursor: pointer; }
         .btn-eliminar:hover { background: #dc2626; }
         #pantalla-login { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(15, 23, 42, 0.85); display: flex; align-items: center; justify-content: center; z-index: 9999; }
-        .login-box { background: #ffffff; padding: 30px; border-radius: 12px; width: 400px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
-        .item-lista { display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 10px 15px; border: 1px solid #e2e8f0; border-radius: 6px; margin-bottom: 8px; }
+        .login-box { background: #ffffff; padding: 30px; border-radius: 12px; width: 400px; max-width: calc(100vw - 32px); text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        .item-lista { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; background: #f8fafc; padding: 10px 15px; border: 1px solid #e2e8f0; border-radius: 6px; margin-bottom: 8px; }
+        .item-lista > div { flex: 1 1 220px; min-width: 0; overflow-wrap: anywhere; }
+        .admin-acciones-eliminar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+        .admin-acciones-eliminar span { color: #64748b; font-size: 13px; }
+        .btn-eliminar:disabled { opacity: 0.5; cursor: not-allowed; }
+        @media (max-width: 480px) {
+            .admin-container { margin: 16px auto; padding: 0 10px; }
+            .admin-card { padding: 18px 14px; }
+            .login-box { padding: 22px 18px; }
+            .item-lista { align-items: flex-start; }
+        }
     </style>
 </head>
 <body>
@@ -66,6 +76,10 @@
                 <label for="admin-archivo-vida">Adjuntar Imagen ilustrativa opcional:</label>
                 <input type="file" id="admin-archivo-vida" accept="image/*">
                 <button class="btn-actualizar" onclick="publicarSeccionEspecifica('vida', event)">Publicar en Vida</button>
+                <div class="admin-acciones-eliminar">
+                    <button class="btn-eliminar" id="btn-eliminar-seccion-vida" type="button" onclick="eliminarSeccionEditorial('vida')" disabled>Eliminar contenido guardado de Vida</button>
+                    <span id="estado-seccion-vida" aria-live="polite">Comprobando contenido guardado...</span>
+                </div>
             </div>
 
             <!-- 3. SECCIÓN OBRA -->
@@ -78,6 +92,10 @@
                 <label for="admin-archivo-obra">Adjuntar Archivo o Imagen opcional:</label>
                 <input type="file" id="admin-archivo-obra" accept="image/*,.pdf">
                 <button class="btn-actualizar" onclick="publicarSeccionEspecifica('obra', event)">Publicar en Obra</button>
+                <div class="admin-acciones-eliminar">
+                    <button class="btn-eliminar" id="btn-eliminar-seccion-obra" type="button" onclick="eliminarSeccionEditorial('obra')" disabled>Eliminar contenido guardado de Obra</button>
+                    <span id="estado-seccion-obra" aria-live="polite">Comprobando contenido guardado...</span>
+                </div>
             </div>
 
             <!-- 4. SECCIÓN FOTOS -->
@@ -86,6 +104,8 @@
                 <input type="file" id="admin-foto-archivo" accept="image/*">
                 <input type="text" id="admin-foto-nombre" placeholder="Título o descripción de la foto">
                 <button class="btn-actualizar" onclick="subirMultimedia('fotos', 'admin-foto-archivo', 'admin-foto-nombre', 'image', event)">Subir Foto a la Galería</button>
+                <h3 style="margin: 18px 0 8px; color: #334155;">Fotos publicadas</h3>
+                <div id="lista-admin-fotos" aria-live="polite"><p style="color: #64748b; font-size: 14px;">Inicia sesión para cargar la lista.</p></div>
             </div>
 
             <!-- 5. SECCIÓN VIDEOS -->
@@ -94,6 +114,8 @@
                 <input type="file" id="admin-video-archivo" accept="video/*">
                 <input type="text" id="admin-video-nombre" placeholder="Título del video">
                 <button class="btn-actualizar" onclick="subirMultimedia('videos', 'admin-video-archivo', 'admin-video-nombre', 'video', event)">Subir Video</button>
+                <h3 style="margin: 18px 0 8px; color: #334155;">Videos publicados</h3>
+                <div id="lista-admin-videos" aria-live="polite"><p style="color: #64748b; font-size: 14px;">Inicia sesión para cargar la lista.</p></div>
             </div>
 
             <!-- CONTACTO PÚBLICO -->
@@ -163,8 +185,13 @@
                 document.getElementById('input-clave').value = '';
                 document.getElementById('pantalla-login').style.display = 'none';
                 document.getElementById('panel-contenido').style.display = 'block';
-                await actualizarListaInicio();
-                await cargarContactoAdmin();
+                await Promise.all([
+                    actualizarListaInicio(),
+                    actualizarListaMultimedia('fotos'),
+                    actualizarListaMultimedia('videos'),
+                    actualizarEstadoSeccionesEditoriales(),
+                    cargarContactoAdmin()
+                ]);
             } catch (error) {
                 mensajeError.textContent = 'No se pudo conectar con el servidor.';
                 mensajeError.style.display = 'block';
@@ -262,6 +289,7 @@
                 inputArchivo.value = "";
 
                 alert("¡Publicación guardada con éxito en " + nombreSeccion.toUpperCase() + "!");
+                await actualizarEstadoSeccionesEditoriales();
 
             } catch (error) {
                 alert("Error: " + error.message);
@@ -304,6 +332,7 @@
                     inputArchivo.value = "";
                     document.getElementById(idInputNombre).value = "";
                     alert("¡Archivo guardado y añadido a " + seccionDestino.toUpperCase() + "!");
+                    await actualizarListaMultimedia(seccionDestino);
                 } else {
                     throw new Error(result.error || 'No se pudo guardar el archivo.');
                 }
@@ -340,7 +369,7 @@
                                 <strong style="color: #1e3a8a;">${escaparHtmlAdmin(item.titulo || 'Sin título')}</strong>
                                 <p style="margin: 4px 0 0; font-size: 13px; color: #475569;">${escaparHtmlAdmin(item.texto ? item.texto.substring(0, 60) + '...' : 'Solo contenido multimedia')}</p>
                             </div>
-                            <button class="btn-eliminar" data-id="${escaparHtmlAdmin(item.id || '')}" onclick="eliminarPublicacion(this.dataset.id)">Eliminar</button>
+                            <button class="btn-eliminar" data-id="${escaparHtmlAdmin(item.id || '')}" data-titulo="${escaparHtmlAdmin(item.titulo || 'Sin título')}" onclick="eliminarPublicacion(this.dataset.id, 'inicio', this.dataset.titulo, this)">Eliminar</button>
                         </div>
                     `;
                 });
@@ -350,22 +379,129 @@
             }
         }
 
-        async function eliminarPublicacion(id) {
-            if (!confirm("¿Estás seguro de que deseas eliminar esta publicación?")) return;
+        async function actualizarListaMultimedia(seccion) {
+            const configuracion = {
+                fotos: { id: 'lista-admin-fotos', nombre: 'Fotos' },
+                videos: { id: 'lista-admin-videos', nombre: 'Videos' }
+            }[seccion];
+            if (!configuracion) return;
+
+            const contenedor = document.getElementById(configuracion.id);
+            if (!contenedor) return;
+            contenedor.innerHTML = '<p style="color: #64748b; font-size: 14px;">Cargando archivos...</p>';
 
             try {
-                const response = await fetch('/api/publicaciones/' + encodeURIComponent(id), {
+                const items = [];
+                let offset = 0;
+                while (true) {
+                    const response = await fetch('/api/publicaciones?seccion=' + encodeURIComponent(seccion) + '&offset=' + offset, { cache: 'no-store' });
+                    const result = await leerJsonRespuesta(response);
+                    if (!response.ok || !result.success) throw new Error(result.error || 'No se pudieron cargar los archivos.');
+                    const pagina = result.publicaciones || [];
+                    items.push(...pagina);
+                    if (pagina.length < 100) break;
+                    offset += pagina.length;
+                    if (offset > 1000000) throw new Error('No se pudo terminar de cargar la lista de archivos.');
+                }
+
+                if (!items.length) {
+                    contenedor.innerHTML = '<p style="color: #64748b; font-size: 14px;">No hay elementos publicados en ' + configuracion.nombre + '.</p>';
+                    return;
+                }
+
+                contenedor.innerHTML = items.map(function(item) {
+                    const titulo = item.titulo || (seccion === 'fotos' ? 'Foto sin título' : 'Video sin título');
+                    const tipo = seccion === 'fotos' ? 'Imagen' : 'Video';
+                    return `
+                        <div class="item-lista">
+                            <div>
+                                <strong style="color: #1e3a8a;">${escaparHtmlAdmin(titulo)}</strong>
+                                <p style="margin: 4px 0 0; font-size: 13px; color: #475569;">${tipo}${item.fecha ? ' · ' + escaparHtmlAdmin(item.fecha) : ''}</p>
+                            </div>
+                            <button class="btn-eliminar" type="button" data-id="${escaparHtmlAdmin(item.id || '')}" data-seccion="${seccion}" data-titulo="${escaparHtmlAdmin(titulo)}" onclick="eliminarPublicacion(this.dataset.id, this.dataset.seccion, this.dataset.titulo, this)">Eliminar</button>
+                        </div>
+                    `;
+                }).join('');
+            } catch (error) {
+                contenedor.innerHTML = '<p style="color: #b91c1c; font-size: 14px;">' + escaparHtmlAdmin(error.message || 'Error al cargar la lista.') + '</p>';
+            }
+        }
+
+        async function actualizarEstadoSeccionesEditoriales() {
+            try {
+                const response = await fetch('/api/secciones', { cache: 'no-store' });
+                const result = await leerJsonRespuesta(response);
+                if (!response.ok || !result.success) throw new Error(result.error || 'No se pudo revisar el contenido.');
+
+                const contenidos = result.secciones || {};
+                const archivos = result.archivos || {};
+                ['vida', 'obra'].forEach(function(seccion) {
+                    const button = document.getElementById('btn-eliminar-seccion-' + seccion);
+                    const estado = document.getElementById('estado-seccion-' + seccion);
+                    const hayContenido = Boolean(String(contenidos[seccion] || '').trim() || archivos[seccion]);
+                    if (button) button.disabled = !hayContenido;
+                    if (estado) estado.textContent = hayContenido
+                        ? 'Hay contenido guardado; al eliminarlo se borrarán también sus archivos asociados.'
+                        : 'No hay contenido guardado para eliminar.';
+                });
+            } catch (error) {
+                ['vida', 'obra'].forEach(function(seccion) {
+                    const button = document.getElementById('btn-eliminar-seccion-' + seccion);
+                    const estado = document.getElementById('estado-seccion-' + seccion);
+                    if (button) button.disabled = true;
+                    if (estado) estado.textContent = error.message || 'No se pudo revisar el contenido guardado.';
+                });
+            }
+        }
+
+        async function eliminarSeccionEditorial(seccion) {
+            const nombre = seccion === 'vida' ? 'Vida' : 'Obra';
+            if (!['vida', 'obra'].includes(seccion)) return;
+            if (!confirm('¿Eliminar todo el texto y el archivo guardado en la sección ' + nombre + '? Esta acción no se puede deshacer.')) return;
+
+            const button = document.getElementById('btn-eliminar-seccion-' + seccion);
+            if (button) button.disabled = true;
+            try {
+                const response = await fetch('/api/secciones/' + encodeURIComponent(seccion), {
                     method: 'DELETE',
                     headers: { 'X-Admin-Password': adminPassword }
                 });
-                const result = await response.json();
+                const result = await leerJsonRespuesta(response);
+                if (!response.ok || !result.success) throw new Error(result.error || 'No se pudo eliminar el contenido.');
+                alert('Contenido de ' + nombre + ' eliminado.');
+                await actualizarEstadoSeccionesEditoriales();
+            } catch (error) {
+                alert('Error al eliminar: ' + (error.message || 'No se pudo eliminar el contenido.'));
+                await actualizarEstadoSeccionesEditoriales();
+            }
+        }
+
+        async function eliminarPublicacion(id, seccion, titulo, boton) {
+            seccion = seccion || 'inicio';
+            const etiqueta = seccion === 'fotos' ? 'la sección Fotos' : (seccion === 'videos' ? 'la sección Videos' : 'Inicio');
+            const nombre = titulo ? ' «' + titulo + '»' : '';
+            if (!confirm('¿Eliminar' + nombre + ' de ' + etiqueta + '? También se eliminarán los comentarios asociados. Esta acción no se puede deshacer.')) return;
+            if (boton) boton.disabled = true;
+
+            try {
+                const response = await fetch('/api/publicaciones/' + encodeURIComponent(id) + '?seccion=' + encodeURIComponent(seccion), {
+                    method: 'DELETE',
+                    headers: { 'X-Admin-Password': adminPassword }
+                });
+                const result = await leerJsonRespuesta(response);
                 if (!response.ok || !result.success) {
                     throw new Error(result.error || 'No se pudo eliminar.');
                 }
                 alert("Publicación eliminada correctamente.");
-                await actualizarListaInicio();
+                if (seccion === 'fotos' || seccion === 'videos') {
+                    await actualizarListaMultimedia(seccion);
+                } else {
+                    await actualizarListaInicio();
+                }
             } catch (error) {
                 alert("Error al eliminar: " + error.message);
+            } finally {
+                if (boton) boton.disabled = false;
             }
         }
 

@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from functools import wraps
 from pathlib import Path
 from typing import Any, Optional, Dict, List, Union, Tuple, Set, cast
-from urllib.parse import urlsplit, urlunsplit
+from urllib.parse import unquote, urlsplit, urlunsplit
 
 import httpx
 from flask import Flask, jsonify, request, send_from_directory, Response
@@ -375,6 +375,67 @@ def quote_segmento(valor: str) -> str:
     )
 
 
+def eliminar_archivo_supabase(
+    bucket: str,
+    path: str
+) -> None:
+
+    if not path:
+        return
+
+    bucket_url = quote_segmento(bucket)
+    url = (
+        f"{SUPABASE_URL}"
+        f"/storage/v1/object/"
+        f"{bucket_url}"
+    )
+    headers = encabezados_supabase_admin()
+    headers["Content-Type"] = "application/json"
+    response = httpx.delete(
+        url,
+        headers=headers,
+        json={"prefixes": [path]},
+        timeout=60.0
+    )
+
+    if response.status_code == 404:
+        return
+
+    if not response.is_success:
+        try:
+            detalle = response.json()
+        except ValueError:
+            detalle = response.text[:1000]
+        raise RuntimeError(
+            f"Supabase Storage respondió HTTP {response.status_code}: {detalle}"
+        )
+
+
+def ruta_storage_desde_url(
+    url: Optional[str],
+    bucket: str
+) -> Optional[str]:
+
+    if not url or not SUPABASE_URL:
+        return None
+
+    partes = urlsplit(url)
+    proyecto = urlsplit(SUPABASE_URL)
+    prefijo = (
+        f"/storage/v1/object/public/"
+        f"{quote_segmento(bucket)}/"
+    )
+
+    if (
+        partes.netloc.lower() != proyecto.netloc.lower()
+        or not partes.path.startswith(prefijo)
+    ):
+        return None
+
+    path = unquote(partes.path[len(prefijo):]).strip("/")
+    return path or None
+
+
 # ============================================================
 # OBTENER URL PÚBLICA
 # ============================================================
@@ -698,12 +759,19 @@ def obtener_publicaciones() -> Any:
         return respuesta_error("Sección de publicaciones no válida.", 400)
 
     try:
+        offset = int(request.args.get("offset", "0"))
+    except ValueError:
+        return respuesta_error("El desplazamiento solicitado no es válido.", 400)
+    if offset < 0 or offset > 1000000:
+        return respuesta_error("El desplazamiento solicitado está fuera de rango.", 400)
+
+    try:
         consulta = (
             supabase
             .table("publicaciones")
             .select("id,titulo,texto,mediaUrl,mediaType,mediaPath,seccion,fecha")
             .order("fecha", desc=True)
-            .limit(100)
+            .range(offset, offset + 99)
         )
         if seccion:
             consulta = consulta.eq("seccion", seccion)
@@ -821,12 +889,76 @@ def eliminar_publicacion(publicacion_id: str) -> Any:
     if supabase_admin is None:
         return respuesta_error("Supabase administrativo no está configurado.", 503)
 
+    seccion_esperada = request.args.get("seccion", "inicio").strip().lower()
+    if seccion_esperada not in SECCIONES_PUBLICACIONES:
+        return respuesta_error("Sección de publicaciones no válida.", 400)
+
     try:
+        if SUPABASE_WRITE_KEY.startswith("sb_secret_"):
+            publicaciones = solicitar_supabase_admin(
+                "GET",
+                "publicaciones",
+                params={
+                    "id": f"eq.{publicacion_id}",
+                    "seccion": f"eq.{seccion_esperada}",
+                    "select": "id,seccion,mediaPath,mediaUrl",
+                    "limit": "1"
+                }
+            )
+        else:
+            respuesta_publicacion = (
+                supabase_admin
+                .table("publicaciones")
+                .select("id,seccion,mediaPath,mediaUrl")
+                .eq("id", publicacion_id)
+                .eq("seccion", seccion_esperada)
+                .limit(1)
+                .execute()
+            )
+            publicaciones = cast(List[Any], respuesta_publicacion.data or [])
+
+        if not publicaciones or not isinstance(publicaciones[0], dict):
+            return respuesta_error("No se encontró la publicación.", 404)
+
+        publicacion = cast(Dict[str, Any], publicaciones[0])
+        if publicacion.get("seccion") != seccion_esperada:
+            return respuesta_error(
+                "La publicación no pertenece a la sección indicada.",
+                409
+            )
+
+        media_path = publicacion.get("mediaPath")
+        if media_path is not None and not isinstance(media_path, str):
+            return respuesta_error("La ruta del archivo guardado no es válida.", 409)
+        media_path = media_path.strip() if isinstance(media_path, str) else ""
+        if not media_path and isinstance(publicacion.get("mediaUrl"), str):
+            media_path = ruta_storage_desde_url(
+                publicacion.get("mediaUrl"),
+                SUPABASE_STORAGE_BUCKET
+            ) or ""
+
+        media_eliminado: Optional[bool] = None
+        if media_path:
+            prefijo_esperado = f"publicaciones/{seccion_esperada}/"
+            if not media_path.startswith(prefijo_esperado):
+                return respuesta_error(
+                    "El archivo no pertenece a la sección de esta publicación; no se eliminó nada.",
+                    409
+                )
+            eliminar_archivo_supabase(
+                SUPABASE_STORAGE_BUCKET,
+                media_path
+            )
+            media_eliminado = True
+
         if SUPABASE_WRITE_KEY.startswith("sb_secret_"):
             filas = solicitar_supabase_admin(
                 "DELETE",
                 "publicaciones",
-                params={"id": f"eq.{publicacion_id}"},
+                params={
+                    "id": f"eq.{publicacion_id}",
+                    "seccion": f"eq.{seccion_esperada}"
+                },
                 prefer="return=representation"
             )
         else:
@@ -835,13 +967,18 @@ def eliminar_publicacion(publicacion_id: str) -> Any:
                 .table("publicaciones")
                 .delete()
                 .eq("id", publicacion_id)
+                .eq("seccion", seccion_esperada)
                 .execute()
             )
             filas = cast(List[Any], respuesta_delete.data or [])
 
         if not filas:
             return respuesta_error("No se encontró la publicación.", 404)
-        return jsonify({"success": True})
+
+        return jsonify({
+            "success": True,
+            "media_eliminado": media_eliminado
+        })
 
     except Exception as error:
         app.logger.exception("No se pudo eliminar la publicación.")
@@ -1233,8 +1370,55 @@ def actualizar_contenido_seccion(
 
     archivo_url: Optional[str] = None
     archivo = request.files.get("archivo")
+    ruta_archivo_anterior: Optional[str] = None
 
     if archivo and archivo.filename:
+        try:
+            if SUPABASE_WRITE_KEY.startswith("sb_secret_"):
+                archivos_anteriores = solicitar_supabase_admin(
+                    "GET",
+                    "contenido_secciones",
+                    params={
+                        "seccion": f"eq.{seccion}",
+                        "select": "archivo_url",
+                        "limit": "1"
+                    }
+                )
+            else:
+                if supabase_admin is None:
+                    return respuesta_error(
+                        "Supabase administrativo no está configurado.",
+                        503
+                    )
+                respuesta_anterior = (
+                    supabase_admin
+                    .table("contenido_secciones")
+                    .select("archivo_url")
+                    .eq("seccion", seccion)
+                    .limit(1)
+                    .execute()
+                )
+                archivos_anteriores = cast(
+                    List[Any],
+                    respuesta_anterior.data or []
+                )
+
+            if archivos_anteriores and isinstance(archivos_anteriores[0], dict):
+                url_anterior = archivos_anteriores[0].get("archivo_url")
+                if isinstance(url_anterior, str):
+                    ruta_archivo_anterior = ruta_storage_desde_url(
+                        url_anterior,
+                        SUPABASE_STORAGE_BUCKET
+                    )
+                    if (
+                        ruta_archivo_anterior
+                        and not ruta_archivo_anterior.startswith(f"secciones/{seccion}/")
+                    ):
+                        ruta_archivo_anterior = None
+        except Exception as error:
+            app.logger.exception("No se pudo revisar el archivo previo de la sección.")
+            return respuesta_error(str(error), 500)
+
         nombre_original = secure_filename(archivo.filename)
         extension = Path(nombre_original).suffix.lower()
 
@@ -1343,6 +1527,19 @@ def actualizar_contenido_seccion(
 
             guardada = fila
 
+        if ruta_archivo_anterior and ruta_archivo_anterior != ruta_storage:
+            try:
+                eliminar_archivo_supabase(
+                    SUPABASE_STORAGE_BUCKET,
+                    ruta_archivo_anterior
+                )
+            except Exception as error_storage:
+                app.logger.warning(
+                    "Se actualizó %s, pero no se pudo retirar el archivo previo: %s",
+                    seccion,
+                    error_storage
+                )
+
         return jsonify({
             "success": True,
             "message": "Publicación hecha exitosamente en la base de datos",
@@ -1360,4 +1557,93 @@ def actualizar_contenido_seccion(
 
     except Exception as error:
         app.logger.exception("No se pudo guardar el contenido editorial.")
+        return respuesta_error(str(error), 500)
+
+
+@app.route(
+    "/api/secciones/<seccion>",
+    methods=["DELETE"]
+)
+@requiere_admin
+def eliminar_contenido_seccion(seccion: str) -> Any:
+
+    if seccion not in SECCIONES_EDITORIALES:
+        return respuesta_error("Sección editorial no válida.", 404)
+
+    if supabase_admin is None:
+        return respuesta_error("Supabase administrativo no está configurado.", 503)
+
+    try:
+        if SUPABASE_WRITE_KEY.startswith("sb_secret_"):
+            filas_seccion = solicitar_supabase_admin(
+                "GET",
+                "contenido_secciones",
+                params={
+                    "seccion": f"eq.{seccion}",
+                    "select": "seccion,archivo_url",
+                    "limit": "1"
+                }
+            )
+        else:
+            respuesta_seccion = (
+                supabase_admin
+                .table("contenido_secciones")
+                .select("seccion,archivo_url")
+                .eq("seccion", seccion)
+                .limit(1)
+                .execute()
+            )
+            filas_seccion = cast(List[Any], respuesta_seccion.data or [])
+
+        if not filas_seccion or not isinstance(filas_seccion[0], dict):
+            return respuesta_error("No hay contenido guardado para eliminar.", 404)
+
+        fila_seccion = cast(Dict[str, Any], filas_seccion[0])
+        archivo_url = fila_seccion.get("archivo_url")
+        if archivo_url is not None and not isinstance(archivo_url, str):
+            return respuesta_error("La URL del archivo guardado no es válida.", 409)
+        archivo_path = ruta_storage_desde_url(
+            archivo_url,
+            SUPABASE_STORAGE_BUCKET
+        )
+        if archivo_path:
+            prefijo_esperado = f"secciones/{seccion}/"
+            if not archivo_path.startswith(prefijo_esperado):
+                return respuesta_error(
+                    "El archivo no pertenece a esta sección; no se eliminó nada.",
+                    409
+                )
+            eliminar_archivo_supabase(
+                SUPABASE_STORAGE_BUCKET,
+                archivo_path
+            )
+
+        if SUPABASE_WRITE_KEY.startswith("sb_secret_"):
+            filas_eliminadas = solicitar_supabase_admin(
+                "DELETE",
+                "contenido_secciones",
+                params={"seccion": f"eq.{seccion}"},
+                prefer="return=representation"
+            )
+        else:
+            respuesta_delete = (
+                supabase_admin
+                .table("contenido_secciones")
+                .delete()
+                .eq("seccion", seccion)
+                .execute()
+            )
+            filas_eliminadas = cast(List[Any], respuesta_delete.data or [])
+
+        if not filas_eliminadas:
+            return respuesta_error("No hay contenido guardado para eliminar.", 404)
+
+        return jsonify({
+            "success": True,
+            "seccion": seccion,
+            "archivo_eliminado": bool(archivo_path)
+        })
+
+    except Exception as error:
+        app.logger.exception("No se pudo eliminar el contenido editorial.")
         return respuesta_error(str(error), 500)
