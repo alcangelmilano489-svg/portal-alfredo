@@ -78,7 +78,7 @@ PUBLIC_ASSETS = {
 
 
 # ============================================================
-# FORMATOS MULTIMEDIA PERMITIDOS
+# FORMATOS MULTIMEDIA Y DOCUMENTOS PERMITIDOS
 # ============================================================
 
 ALLOWED_MEDIA = {
@@ -92,6 +92,10 @@ ALLOWED_MEDIA = {
     ".mov": ("video/quicktime", "video"),
     ".mp4": ("video/mp4", "video"),
     ".webm": ("video/webm", "video"),
+
+    ".pdf": ("application/pdf", "document"),
+    ".doc": ("application/msword", "document"),
+    ".docx": ("application/vnd.openxmlformats-officedocument.wordprocessingml.document", "document"),
 }
 
 
@@ -650,7 +654,7 @@ def verificar_admin() -> Any:
 
 
 # ============================================================
-# SECCIONES EDITORIALES
+# SECCIONES EDITORIALES (VIDA / OBRA) - TEXTO Y DOCUMENTOS
 # ============================================================
 
 @app.route(
@@ -677,7 +681,7 @@ def obtener_contenido_secciones() -> Any:
                 "contenido_secciones"
             )
             .select(
-                "seccion,contenido,updated_at"
+                "seccion,contenido,archivo_url,updated_at"
             )
             .in_(
                 "seccion",
@@ -688,8 +692,8 @@ def obtener_contenido_secciones() -> Any:
 
         filas = cast(List[Any], respuesta_query.data if respuesta_query and respuesta_query.data else [])
 
-        contenido: Dict[str, Optional[str]] = {
-            seccion: None
+        contenido: Dict[str, Dict[str, Any]] = {
+            seccion: {"contenido": "", "archivo_url": None}
             for seccion
             in SECCIONES_EDITORIALES
         }
@@ -698,12 +702,10 @@ def obtener_contenido_secciones() -> Any:
             if isinstance(fila, dict):
                 seccion_val = fila.get("seccion")
                 if seccion_val in SECCIONES_EDITORIALES:
-                    contenido[seccion_val] = (
-                        fila.get(
-                            "contenido"
-                        )
-                        or ""
-                    )
+                    contenido[seccion_val] = {
+                        "contenido": fila.get("contenido") or "",
+                        "archivo_url": fila.get("archivo_url")
+                    }
 
         return jsonify({
             "success": True,
@@ -724,7 +726,7 @@ def obtener_contenido_secciones() -> Any:
 
 
 # ============================================================
-# ACTUALIZAR SECCIÓN
+# ACTUALIZAR SECCIÓN (VIDA / OBRA)
 # ============================================================
 
 @app.route(
@@ -746,16 +748,7 @@ def actualizar_contenido_seccion(
             404
         )
 
-    datos = (
-        request.get_json(
-            silent=True
-        )
-        or {}
-    )
-
-    contenido = datos.get(
-        "contenido"
-    )
+    contenido = request.form.get("contenido", "")
 
     if not isinstance(
         contenido,
@@ -775,17 +768,57 @@ def actualizar_contenido_seccion(
             413
         )
 
+    archivo_url: Optional[str] = None
+    archivo = request.files.get("archivo")
+
+    if archivo and archivo.filename:
+        nombre_original = secure_filename(archivo.filename)
+        extension = Path(nombre_original).suffix.lower()
+
+        if extension not in ALLOWED_MEDIA or ALLOWED_MEDIA[extension][1] not in ("document", "image"):
+            return respuesta_error(
+                "Formato de archivo no permitido para secciones editoriales.",
+                400
+            )
+
+        content_type, _ = ALLOWED_MEDIA[extension]
+        bytes_archivo = archivo.read()
+        sufijo_unico = uuid.uuid4().hex[:8]
+        ruta_storage = f"secciones/{seccion}/{sufijo_unico}_{nombre_original}"
+
+        try:
+            subir_archivo_supabase(
+                SUPABASE_STORAGE_BUCKET,
+                ruta_storage,
+                bytes_archivo,
+                content_type
+            )
+            if supabase_admin:
+                archivo_url = obtener_url_publica(
+                    supabase_admin,
+                    SUPABASE_STORAGE_BUCKET,
+                    ruta_storage
+                )
+        except Exception as err:
+            return respuesta_error(
+                f"Error al subir el archivo: {err}",
+                500
+            )
+
     actualizado = (
         datetime.now(
             timezone.utc
         ).isoformat()
     )
 
-    fila = {
+    fila: Dict[str, Any] = {
         "seccion": seccion,
         "contenido": contenido,
         "updated_at": actualizado
     }
+
+    if archivo_url:
+        fila["archivo_url"] = archivo_url
 
     try:
 
@@ -854,6 +887,7 @@ def actualizar_contenido_seccion(
                 "contenido",
                 contenido
             ),
+            "archivo_url": guardada.get("archivo_url"),
             "updated_at": guardada.get(
                 "updated_at",
                 actualizado
@@ -863,100 +897,13 @@ def actualizar_contenido_seccion(
     except Exception as error:
 
         app.logger.exception(
-            "No se pudo guardar "
-            "el contenido editorial."
+            "No se pudo guardar el contenido editorial."
         )
 
-        return respuesta_error(
-            str(error),
-            500
-        )
+        msg_error = str(error)
+        return respuesta_error(msg_error, 500)
 
 
 # ============================================================
-# PUBLICACIONES - GET
-# ============================================================
-
-@app.route(
-    "/api/publicaciones",
-    methods=["GET"]
-)
-def obtener_publicaciones() -> Any:
-
-    if supabase is None:
-
-        return respuesta_error(
-            SUPABASE_CONFIG_ERROR
-            or "Supabase no está configurado.",
-            503
-        )
-
-    seccion = request.args.get(
-        "seccion"
-    )
-
-    if (
-        seccion
-        and seccion not in {
-            "inicio",
-            "fotos",
-            "videos"
-        }
-    ):
-
-        return respuesta_error(
-            "Sección no válida.",
-            400
-        )
-
-    try:
-
-        consulta = (
-            supabase
-            .table(
-                "publicaciones"
-            )
-            .select("*")
-        )
-
-        if seccion:
-
-            consulta = consulta.eq(
-                "seccion",
-                seccion
-            )
-
-        resultado_pub = (
-            consulta
-            .order(
-                "fecha",
-                desc=True
-            )
-            .execute()
-        )
-
-        publicaciones = cast(List[Any], resultado_pub.data if resultado_pub and resultado_pub.data else [])
-
-        return jsonify({
-            "success": True,
-            "publicaciones": (
-                publicaciones
-            )
-        })
-
-    except Exception as error:
-
-        app.logger.exception(
-            "No se pudieron consultar "
-            "las publicaciones."
-        )
-
-        return respuesta_error(
-            str(error),
-            500
-        )
-
-
-# ============================================================
-# COMENTARIOS - GET
-# ======
+# PUBLICACIONES (INICIO / PORTAL, FOTOS, VIDEOS)
+# ========
