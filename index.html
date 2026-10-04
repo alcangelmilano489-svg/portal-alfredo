@@ -303,7 +303,10 @@
 
         function urlMultimedia(valor) {
             try {
-                var url = new URL(valor, window.location.origin);
+                if (valor == null) return '';
+                var valorLimpio = String(valor).trim();
+                if (!valorLimpio || /^(?:null|undefined)$/i.test(valorLimpio)) return '';
+                var url = new URL(valorLimpio, window.location.origin);
                 return url.protocol === 'http:' || url.protocol === 'https:' ? url.href : '';
             } catch (error) {
                 return '';
