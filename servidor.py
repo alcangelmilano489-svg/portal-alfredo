@@ -1,14 +1,13 @@
 import hmac
 import os
-import re
 import uuid
 from datetime import datetime, timezone
 from functools import wraps
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional, Dict, List, Union, Tuple, Set, cast
 
 import httpx
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, jsonify, request, send_from_directory, Response
 from supabase import create_client
 from werkzeug.exceptions import RequestEntityTooLarge
 from werkzeug.utils import secure_filename
@@ -37,7 +36,6 @@ SUPABASE_WRITE_KEY = (
     os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or ""
 ).strip()
 
-# También permite usar la nueva variable de Supabase.
 if not SUPABASE_WRITE_KEY:
     SUPABASE_WRITE_KEY = (
         os.environ.get("SUPABASE_SECRET_KEY") or ""
@@ -55,7 +53,7 @@ MAX_UPLOAD_BYTES = 100 * 1024 * 1024
 
 app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_BYTES
 
-SECCIONES_EDITORIALES = {
+SECCIONES_EDITORIALES: Set[str] = {
     "vida",
     "obra"
 }
@@ -101,7 +99,7 @@ ALLOWED_MEDIA = {
 # INICIALIZACIÓN DE SUPABASE
 # ============================================================
 
-SUPABASE_CONFIG_ERROR = None
+SUPABASE_CONFIG_ERROR: Optional[str] = None
 
 supabase = None
 supabase_admin = None
@@ -152,7 +150,7 @@ else:
 def respuesta_error(
     mensaje: str,
     estado: int
-):
+) -> Tuple[Response, int]:
 
     return jsonify({
         "success": False,
@@ -164,7 +162,7 @@ def respuesta_error(
 # HEADERS PARA SUPABASE
 # ============================================================
 
-def encabezados_supabase_admin():
+def encabezados_supabase_admin() -> Dict[str, str]:
 
     if not SUPABASE_WRITE_KEY:
 
@@ -177,9 +175,6 @@ def encabezados_supabase_admin():
     headers = {
         "apikey": SUPABASE_WRITE_KEY
     }
-
-    # Las claves antiguas JWT necesitan Authorization.
-    # Las nuevas sb_secret_ NO deben enviarse como Bearer.
 
     if not SUPABASE_WRITE_KEY.startswith(
         "sb_secret_"
@@ -200,8 +195,8 @@ def solicitar_supabase_admin(
     metodo: str,
     recurso: str,
     prefer: str = "return=representation",
-    **kwargs
-):
+    **kwargs: Any
+) -> List[Any]:
 
     headers = encabezados_supabase_admin()
 
@@ -269,7 +264,7 @@ def subir_archivo_supabase(
     path: str,
     contenido: bytes,
     content_type: str
-):
+) -> httpx.Response:
 
     if not SUPABASE_URL:
 
@@ -354,10 +349,10 @@ def quote_segmento(valor: str) -> str:
 # ============================================================
 
 def obtener_url_publica(
-    cliente_admin,
+    cliente_admin: Any,
     bucket: str,
     path: str
-):
+) -> str:
 
     resultado = (
         cliente_admin
@@ -392,8 +387,8 @@ def obtener_url_publica(
 # ============================================================
 
 def uuid_publicacion_valido(
-    publicacion_id
-):
+    publicacion_id: Any
+) -> Optional[str]:
 
     try:
 
@@ -416,13 +411,13 @@ def uuid_publicacion_valido(
 # AUTENTICACIÓN ADMINISTRATIVA
 # ============================================================
 
-def requiere_admin(funcion):
+def requiere_admin(funcion: Any) -> Any:
 
     @wraps(funcion)
     def validar_admin(
-        *args,
-        **kwargs
-    ):
+        *args: Any,
+        **kwargs: Any
+    ) -> Any:
 
         if not ADMIN_PASSWORD:
 
@@ -486,8 +481,8 @@ def requiere_admin(funcion):
     RequestEntityTooLarge
 )
 def archivo_demasiado_grande(
-    _error
-):
+    _error: Any
+) -> Tuple[Response, int]:
 
     return respuesta_error(
         "El archivo supera el límite "
@@ -501,7 +496,7 @@ def archivo_demasiado_grande(
 # ============================================================
 
 @app.route("/")
-def inicio():
+def inicio() -> Any:
 
     return send_from_directory(
         app.root_path,
@@ -515,7 +510,7 @@ def inicio():
 
 @app.route("/admin")
 @app.route("/admin.html")
-def panel_admin():
+def panel_admin() -> Any:
 
     return send_from_directory(
         app.root_path,
@@ -530,7 +525,7 @@ def panel_admin():
 @app.route(
     "/assets/<path:filename>"
 )
-def servir_asset(filename):
+def servir_asset(filename: str) -> Any:
 
     if filename not in PUBLIC_ASSETS:
 
@@ -552,7 +547,7 @@ def servir_asset(filename):
 @app.route(
     "/api/public-config"
 )
-def configuracion_publica():
+def configuracion_publica() -> Any:
 
     return jsonify({
         "success": True,
@@ -572,7 +567,7 @@ def configuracion_publica():
 # ============================================================
 
 @app.route("/api/health")
-def health():
+def health() -> Any:
 
     return jsonify({
         "success": True,
@@ -607,7 +602,7 @@ def health():
     "/api/admin/verify",
     methods=["POST"]
 )
-def verificar_admin():
+def verificar_admin() -> Any:
 
     if not ADMIN_PASSWORD:
 
@@ -662,7 +657,7 @@ def verificar_admin():
     "/api/secciones",
     methods=["GET"]
 )
-def obtener_contenido_secciones():
+def obtener_contenido_secciones() -> Any:
 
     if supabase is None:
 
@@ -674,7 +669,9 @@ def obtener_contenido_secciones():
 
     try:
 
-        filas = (
+        secciones_lista: List[str] = sorted(list(SECCIONES_EDITORIALES))
+
+        respuesta_query = (
             supabase
             .table(
                 "contenido_secciones"
@@ -684,37 +681,29 @@ def obtener_contenido_secciones():
             )
             .in_(
                 "seccion",
-                sorted(
-                    SECCIONES_EDITORIALES
-                )
+                cast(Any, secciones_lista)
             )
             .execute()
-            .data
         )
 
-        contenido = {
+        filas = cast(List[Any], respuesta_query.data if respuesta_query and respuesta_query.data else [])
+
+        contenido: Dict[str, Optional[str]] = {
             seccion: None
             for seccion
             in SECCIONES_EDITORIALES
         }
 
         for fila in filas:
-
-        from typing import Optional
-
-def get_upper(text: Optional[str]) -> str:
-    if text is not None:
-        return text.upper()
-
-    return ""
-                contenido[
-                    seccion
-                ] = (
-                    fila.get(
-                        "contenido"
+            if isinstance(fila, dict):
+                seccion_val = fila.get("seccion")
+                if seccion_val in SECCIONES_EDITORIALES:
+                    contenido[seccion_val] = (
+                        fila.get(
+                            "contenido"
+                        )
+                        or ""
                     )
-                    or ""
-                )
 
         return jsonify({
             "success": True,
@@ -744,8 +733,8 @@ def get_upper(text: Optional[str]) -> str:
 )
 @requiere_admin
 def actualizar_contenido_seccion(
-    seccion
-):
+    seccion: str
+) -> Any:
 
     if (
         seccion
@@ -800,7 +789,7 @@ def actualizar_contenido_seccion(
 
     try:
 
-        guardada = None
+        guardada: Optional[Dict[str, Any]] = None
 
         if (
             SUPABASE_WRITE_KEY
@@ -822,9 +811,9 @@ def actualizar_contenido_seccion(
                 )
             )
 
-            if filas:
+            if filas and isinstance(filas, list):
 
-                guardada = filas[0]
+                guardada = cast(Dict[str, Any], filas[0])
 
         else:
 
@@ -836,7 +825,7 @@ def actualizar_contenido_seccion(
                     503
                 )
 
-            filas = (
+            res_upsert = (
                 supabase_admin
                 .table(
                     "contenido_secciones"
@@ -846,12 +835,13 @@ def actualizar_contenido_seccion(
                     on_conflict="seccion"
                 )
                 .execute()
-                .data
             )
 
-            if filas:
+            filas = cast(List[Any], res_upsert.data if res_upsert and res_upsert.data else [])
 
-                guardada = filas[0]
+            if filas and isinstance(filas, list):
+
+                guardada = cast(Dict[str, Any], filas[0])
 
         if not guardada:
 
@@ -891,7 +881,7 @@ def actualizar_contenido_seccion(
     "/api/publicaciones",
     methods=["GET"]
 )
-def obtener_publicaciones():
+def obtener_publicaciones() -> Any:
 
     if supabase is None:
 
@@ -936,15 +926,16 @@ def obtener_publicaciones():
                 seccion
             )
 
-        publicaciones = (
+        resultado_pub = (
             consulta
             .order(
                 "fecha",
                 desc=True
             )
             .execute()
-            .data
         )
+
+        publicaciones = cast(List[Any], resultado_pub.data if resultado_pub and resultado_pub.data else [])
 
         return jsonify({
             "success": True,
@@ -968,83 +959,4 @@ def obtener_publicaciones():
 
 # ============================================================
 # COMENTARIOS - GET
-# ============================================================
-
-@app.route(
-    "/api/publicaciones/"
-    "<publicacion_id>/comentarios",
-    methods=["GET"]
-)
-def obtener_comentarios(
-    publicacion_id
-):
-
-    if supabase is None:
-
-        return respuesta_error(
-            SUPABASE_CONFIG_ERROR
-            or "Supabase no está configurado.",
-            503
-        )
-
-    publicacion_uuid = (
-        uuid_publicacion_valido(
-            publicacion_id
-        )
-    )
-
-    if publicacion_uuid is None:
-
-        return respuesta_error(
-            "Publicación no válida.",
-            400
-        )
-
-    try:
-        comentarios = (
-            supabase
-            .table("comentarios")
-            .select("*")
-            .eq("publicacion_id", publicacion_uuid)
-            .order("created_at", desc=False)
-            .execute()
-            .data
-        )
-
-        return jsonify({
-            "success": True,
-            "comentarios": comentarios or []
-        })
-
-    except Exception as error:
-        app.logger.exception(
-            "No se pudieron consultar los comentarios."
-        )
-        return respuesta_error(str(error), 500)
-
-
-# ============================================================
-# MANEJADORES GENERALES DE ERROR
-# ============================================================
-
-@app.errorhandler(404)
-def recurso_no_encontrado(_error):
-    return respuesta_error("Recurso no encontrado.", 404)
-
-
-@app.errorhandler(405)
-def metodo_no_permitido(_error):
-    return respuesta_error("Método no permitido.", 405)
-
-
-@app.errorhandler(500)
-def error_interno(_error):
-    return respuesta_error("Error interno del servidor.", 500)
-
-
-if __name__ == "__main__":
-    app.run(
-        host=os.environ.get("HOST", "0.0.0.0"),
-        port=int(os.environ.get("PORT", "5000")),
-        debug=False
-    )
+# ======
