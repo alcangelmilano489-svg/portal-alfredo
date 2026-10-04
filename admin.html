@@ -27,8 +27,10 @@
         @media (max-width: 480px) {
             .admin-container { margin: 16px auto; padding: 0 10px; }
             .admin-card { padding: 18px 14px; }
-            .login-box { padding: 22px 18px; }
+            .login-box { width: calc(100vw - 24px); max-width: calc(100vw - 24px); box-sizing: border-box; padding: 22px 18px; }
             .item-lista { align-items: flex-start; }
+            .btn-actualizar, .btn-eliminar { min-height: 44px; }
+            .item-lista .btn-eliminar { width: 100%; font-size: 14px; }
         }
     </style>
 </head>
