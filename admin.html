@@ -11,7 +11,7 @@
         .admin-card { background: #ffffff; padding: 25px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
         .admin-card h2 { margin-top: 0; color: #1e3a8a; font-size: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }
         label { display: block; margin-bottom: 6px; font-weight: bold; color: #334155; font-size: 14px; }
-        textarea, input[type="text"], input[type="password"], input[type="file"] { width: 100%; padding: 10px; margin-bottom: 12px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
+        textarea, input[type="text"], input[type="password"], input[type="file"], input[type="email"], input[type="tel"], input[type="url"] { width: 100%; padding: 10px; margin-bottom: 12px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
         textarea { height: 120px; resize: vertical; }
         .btn-actualizar { background: #2563eb; color: white; border: none; padding: 10px 20px; font-size: 15px; font-weight: bold; border-radius: 6px; cursor: pointer; }
         .btn-actualizar:hover { background: #1d4ed8; }
@@ -96,6 +96,22 @@
                 <button class="btn-actualizar" onclick="subirMultimedia('videos', 'admin-video-archivo', 'admin-video-nombre', 'video', event)">Subir Video</button>
             </div>
 
+            <!-- CONTACTO PÚBLICO -->
+            <div class="admin-card">
+                <h2>Contacto y redes sociales</h2>
+                <p style="color:#64748b; font-size:14px;">Estos canales aparecerán en la pestaña Contacto del sitio público.</p>
+                <label for="admin-contacto-whatsapp">Número de WhatsApp:</label>
+                <input type="tel" id="admin-contacto-whatsapp" maxlength="32" placeholder="+58 412 123 4567">
+                <label for="admin-contacto-email">Correo electrónico:</label>
+                <input type="email" id="admin-contacto-email" maxlength="254" placeholder="contacto@ejemplo.com">
+                <label for="admin-contacto-messenger">Enlace de Facebook Messenger:</label>
+                <input type="url" id="admin-contacto-messenger" maxlength="2048" placeholder="https://m.me/usuario">
+                <label for="admin-contacto-tiktok">Usuario de TikTok:</label>
+                <input type="text" id="admin-contacto-tiktok" maxlength="24" placeholder="@usuario">
+                <button class="btn-actualizar" onclick="guardarContactoAdmin(event)">Guardar datos de contacto</button>
+                <p id="estado-contacto-admin" aria-live="polite" style="color:#475569; font-size:14px;"></p>
+            </div>
+
             <!-- GESTOR GENERAL DE ELEMENTOS -->
             <div class="admin-card">
                 <h2>⚙️ Gestionar Publicaciones Activas</h2>
@@ -114,6 +130,15 @@
             return String(valor == null ? '' : valor).replace(/[&<>"']/g, function(caracter) {
                 return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[caracter];
             });
+        }
+
+        async function leerJsonRespuesta(response) {
+            const tipo = response.headers.get('content-type') || '';
+            if (!tipo.toLowerCase().includes('application/json')) {
+                const detalle = (await response.text()).slice(0, 180).replace(/\s+/g, ' ').trim();
+                throw new Error('El servidor respondió HTTP ' + response.status + ' con contenido no JSON.' + (detalle ? ' ' + detalle : ''));
+            }
+            return response.json();
         }
 
         async function verificarClave() {
@@ -139,6 +164,7 @@
                 document.getElementById('pantalla-login').style.display = 'none';
                 document.getElementById('panel-contenido').style.display = 'block';
                 await actualizarListaInicio();
+                await cargarContactoAdmin();
             } catch (error) {
                 mensajeError.textContent = 'No se pudo conectar con el servidor.';
                 mensajeError.style.display = 'block';
@@ -215,19 +241,18 @@
 
             try {
                 const formData = new FormData();
-                formData.append('titulo', titulo);
-                formData.append('texto', texto);
-                formData.append('seccion', nombreSeccion); // Envía 'vida' u 'obra'
+                const contenido = [titulo, texto].filter(Boolean).join('\n\n');
+                formData.append('contenido', contenido);
                 if (inputArchivo.files && inputArchivo.files[0]) {
-                    formData.append('file', inputArchivo.files[0]);
+                    formData.append('archivo', inputArchivo.files[0]);
                 }
 
-                const response = await fetch('/api/publicaciones', {
-                    method: 'POST',
+                const response = await fetch('/api/secciones/' + encodeURIComponent(nombreSeccion), {
+                    method: 'PUT',
                     headers: { 'X-Admin-Password': adminPassword },
                     body: formData
                 });
-                const result = await response.json();
+                const result = await leerJsonRespuesta(response);
                 if (!response.ok || !result.success) {
                     throw new Error(result.error || 'No se pudo guardar la publicación.');
                 }
@@ -315,7 +340,7 @@
                                 <strong style="color: #1e3a8a;">${escaparHtmlAdmin(item.titulo || 'Sin título')}</strong>
                                 <p style="margin: 4px 0 0; font-size: 13px; color: #475569;">${escaparHtmlAdmin(item.texto ? item.texto.substring(0, 60) + '...' : 'Solo contenido multimedia')}</p>
                             </div>
-                            <button class="btn-eliminar" onclick="eliminarPublicacion(${item.id})">Eliminar</button>
+                            <button class="btn-eliminar" data-id="${escaparHtmlAdmin(item.id || '')}" onclick="eliminarPublicacion(this.dataset.id)">Eliminar</button>
                         </div>
                     `;
                 });
@@ -329,7 +354,7 @@
             if (!confirm("¿Estás seguro de que deseas eliminar esta publicación?")) return;
 
             try {
-                const response = await fetch('/api/publicaciones/' + id, {
+                const response = await fetch('/api/publicaciones/' + encodeURIComponent(id), {
                     method: 'DELETE',
                     headers: { 'X-Admin-Password': adminPassword }
                 });
@@ -341,6 +366,53 @@
                 await actualizarListaInicio();
             } catch (error) {
                 alert("Error al eliminar: " + error.message);
+            }
+        }
+
+        async function cargarContactoAdmin() {
+            const estado = document.getElementById('estado-contacto-admin');
+            try {
+                const response = await fetch('/api/contacto-publico', { cache: 'no-store' });
+                const result = await leerJsonRespuesta(response);
+                if (!response.ok || !result.success) throw new Error(result.error || 'No se pudieron cargar los datos.');
+                const contacto = result.contacto || {};
+                document.getElementById('admin-contacto-whatsapp').value = contacto.whatsapp || '';
+                document.getElementById('admin-contacto-email').value = contacto.email || '';
+                document.getElementById('admin-contacto-messenger').value = contacto.messenger_url || '';
+                document.getElementById('admin-contacto-tiktok').value = contacto.tiktok_handle || '';
+                estado.textContent = 'Datos de contacto cargados.';
+            } catch (error) {
+                estado.textContent = error.message || 'No se pudieron cargar los datos de contacto.';
+            }
+        }
+
+        async function guardarContactoAdmin(eventRef) {
+            const boton = eventRef.target;
+            const original = boton.textContent;
+            const estado = document.getElementById('estado-contacto-admin');
+            const contacto = {
+                whatsapp: document.getElementById('admin-contacto-whatsapp').value.trim(),
+                email: document.getElementById('admin-contacto-email').value.trim(),
+                messenger_url: document.getElementById('admin-contacto-messenger').value.trim(),
+                tiktok_handle: document.getElementById('admin-contacto-tiktok').value.trim()
+            };
+            boton.disabled = true;
+            boton.textContent = 'Guardando...';
+            estado.textContent = '';
+            try {
+                const response = await fetch('/api/contacto-publico', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'X-Admin-Password': adminPassword },
+                    body: JSON.stringify(contacto)
+                });
+                const result = await leerJsonRespuesta(response);
+                if (!response.ok || !result.success) throw new Error(result.error || 'No se pudieron guardar los datos.');
+                estado.textContent = 'Información de contacto actualizada correctamente.';
+            } catch (error) {
+                estado.textContent = error.message || 'No se pudieron guardar los datos de contacto.';
+            } finally {
+                boton.disabled = false;
+                boton.textContent = original;
             }
         }
     </script>

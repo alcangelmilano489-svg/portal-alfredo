@@ -1077,3 +1077,81 @@ body {
 .admin-card button[style*="background: #ef4444"]:hover {
     background: #dc2626 !important;
 }
+
+
+/* Contacto público: canales configurables */
+.contacto-intro {
+    color: #475569;
+    margin: 0 0 18px;
+}
+
+.contacto-canales {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+    margin: 18px 0 8px;
+}
+
+.contacto-tarjeta {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    min-width: 0;
+    padding: 15px;
+    color: #172554;
+    text-decoration: none;
+    background: #ffffff;
+    border: 1px solid #dbe4f0;
+    border-radius: 12px;
+    box-shadow: 0 3px 12px rgba(15, 23, 42, 0.06);
+    transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+}
+
+.contacto-tarjeta:hover,
+.contacto-tarjeta:focus-visible {
+    transform: translateY(-2px);
+    border-color: #93c5fd;
+    box-shadow: 0 7px 18px rgba(15, 23, 42, 0.12);
+    outline: none;
+}
+
+.contacto-icono {
+    display: grid;
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
+    place-items: center;
+    color: #1d4ed8;
+    background: #eff6ff;
+    border-radius: 50%;
+    font-size: 23px;
+    font-weight: 700;
+}
+
+.contacto-detalle {
+    display: grid;
+    min-width: 0;
+    gap: 4px;
+}
+
+.contacto-detalle strong {
+    font-size: 15px;
+}
+
+.contacto-detalle small {
+    overflow-wrap: anywhere;
+    color: #64748b;
+    font-size: 13px;
+}
+
+.contacto-flecha {
+    margin-left: auto;
+    color: #64748b;
+    font-size: 18px;
+}
+
+@media (max-width: 480px) {
+    .contacto-canales {
+        grid-template-columns: 1fr;
+    }
+}

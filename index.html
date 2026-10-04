@@ -72,22 +72,10 @@
 
     <section id="contacto-seccion" class="seccion-fija">
         <div class="seccion-header"><h2>Contacto</h2></div>
-        <form id="form-contacto" onsubmit="enviarMensajeContacto(event)" class="form-contacto-grid">
-            <div class="form-fila">
-                <label for="contacto-nombre">Nombre:</label>
-                <input type="text" id="contacto-nombre" required placeholder="Tu nombre completo">
-            </div>
-            <div class="form-fila">
-                <label for="contacto-correo">Correo electrónico:</label>
-                <input type="email" id="contacto-correo" required placeholder="tucorreo@ejemplo.com">
-            </div>
-            <div class="form-fila">
-                <label for="contacto-mensaje">Mensaje:</label>
-                <textarea id="contacto-mensaje" required placeholder="Escribe tu mensaje aquí..."></textarea>
-            </div>
-            <button type="submit" class="btn-enviar-mensaje">Enviar mensaje</button>
-        </form>
-        <div id="mensaje-exito" class="mensaje-exito" style="display:none; color: green; margin-top: 10px;">¡Mensaje enviado con éxito!</div>
+        <p class="contacto-intro">Comunícate con nosotros por cualquiera de estos canales:</p>
+        <div id="contacto-canales" class="contacto-canales" aria-live="polite">
+            <p class="mensaje-vacio">Cargando canales de contacto...</p>
+        </div>
     </section>
 
     <main id="inicio" class="contenido-principal active">
@@ -433,13 +421,47 @@
             }
         }
 
-        function enviarMensajeContacto(event) {
-            event.preventDefault();
-            document.getElementById('mensaje-exito').style.display = 'block';
-            document.getElementById('form-contacto').reset();
-            setTimeout(function() {
-                document.getElementById('mensaje-exito').style.display = 'none';
-            }, 5000);
+        function crearTarjetaContacto(icono, titulo, detalle, href) {
+            return '<a class="contacto-tarjeta" href="' + escaparHtml(href) + '" target="_blank" rel="noopener noreferrer">' +
+                '<span class="contacto-icono" aria-hidden="true">' + escaparHtml(icono) + '</span>' +
+                '<span class="contacto-detalle"><strong>' + escaparHtml(titulo) + '</strong><small>' + escaparHtml(detalle) + '</small></span>' +
+                '<span class="contacto-flecha" aria-hidden="true">↗</span>' +
+            '</a>';
+        }
+
+        async function renderizarContacto() {
+            var contenedor = document.getElementById('contacto-canales');
+            if (!contenedor) return;
+            try {
+                var response = await fetch('/api/contacto-publico', { cache: 'no-store' });
+                var result = await response.json();
+                if (!response.ok || !result.success) throw new Error(result.error || 'No se pudieron cargar los canales.');
+                var contacto = result.contacto || {};
+                var tarjetas = [];
+
+                if (contacto.whatsapp) {
+                    var numero = String(contacto.whatsapp).replace(/\D/g, '');
+                    if (numero.length >= 7) tarjetas.push(crearTarjetaContacto('☎', 'WhatsApp', contacto.whatsapp, 'https://wa.me/' + numero));
+                }
+                if (contacto.email) {
+                    tarjetas.push(crearTarjetaContacto('@', 'Correo electrónico', contacto.email, 'mailto:' + contacto.email));
+                }
+                if (contacto.messenger_url) {
+                    var messenger = urlMultimedia(contacto.messenger_url);
+                    if (messenger) tarjetas.push(crearTarjetaContacto('➤', 'Facebook Messenger', 'Enviar un mensaje', messenger));
+                }
+                if (contacto.tiktok_handle) {
+                    var usuarioTikTok = String(contacto.tiktok_handle).replace(/^@/, '');
+                    tarjetas.push(crearTarjetaContacto('♪', 'TikTok', '@' + usuarioTikTok, 'https://www.tiktok.com/@' + encodeURIComponent(usuarioTikTok)));
+                }
+
+                contenedor.innerHTML = tarjetas.length
+                    ? tarjetas.join('')
+                    : '<p class="mensaje-vacio">Los canales de contacto todavía no están configurados.</p>';
+            } catch (error) {
+                console.error('No se pudieron cargar los canales de contacto:', error);
+                contenedor.innerHTML = '<p class="mensaje-vacio">No se pudo cargar la información de contacto.</p>';
+            }
         }
 
         var realtimeActivo = false;
@@ -452,11 +474,26 @@
                 if (!resultado.success) throw new Error(resultado.error || 'Error al cargar las secciones.');
 
                 var contenido = resultado.secciones || {};
+                var archivos = resultado.archivos || {};
                 ['vida', 'obra'].forEach(function(seccion) {
                     var destino = document.getElementById('contenido-' + seccion);
                     var texto = contenido[seccion];
                     if (destino && typeof texto === 'string') {
                         destino.textContent = texto.trim() ? texto : 'Aún no hay contenido publicado.';
+                        var imagenUrl = urlMultimedia(archivos[seccion]);
+                        if (imagenUrl) {
+                            var imagen = document.createElement('img');
+                            imagen.className = 'imagen-seccion-editorial';
+                            imagen.src = imagenUrl;
+                            imagen.alt = 'Imagen ilustrativa de ' + seccion;
+                            imagen.loading = 'lazy';
+                            imagen.style.display = 'block';
+                            imagen.style.maxWidth = '100%';
+                            imagen.style.height = 'auto';
+                            imagen.style.borderRadius = '8px';
+                            imagen.style.margin = '0 0 14px';
+                            destino.insertBefore(imagen, destino.firstChild);
+                        }
                     }
                 });
             } catch (error) {
@@ -469,6 +506,7 @@
             renderizarNoticias();
             renderizarGaleria('fotos', 'galeria-fotos', 'image');
             renderizarGaleria('videos', 'galeria-videos', 'video');
+            renderizarContacto();
         }
 
         function actualizarComentariosPublicos() {
@@ -507,6 +545,11 @@
                         schema: 'public',
                         table: 'contenido_secciones'
                     }, renderizarSeccionesEditoriales)
+                    .on('postgres_changes', {
+                        event: '*',
+                        schema: 'public',
+                        table: 'contacto_publico'
+                    }, renderizarContacto)
                     .subscribe(function(estado) {
                         realtimeActivo = estado === 'SUBSCRIBED';
                     });
@@ -517,6 +560,7 @@
 
         document.addEventListener('DOMContentLoaded', function() {
             actualizarContenidoPublico();
+            renderizarContacto();
             iniciarSuscripciones();
             iniciarRealtime();
             window.setInterval(function() {

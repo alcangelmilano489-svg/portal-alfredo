@@ -1,10 +1,12 @@
 import hmac
 import os
+import re
 import uuid
 from datetime import datetime, timezone
 from functools import wraps
 from pathlib import Path
 from typing import Any, Optional, Dict, List, Union, Tuple, Set, cast
+from urllib.parse import urlsplit, urlunsplit
 
 import httpx
 from flask import Flask, jsonify, request, send_from_directory, Response
@@ -24,9 +26,24 @@ app = Flask(__name__)
 # CONFIGURACIÓN
 # ============================================================
 
-SUPABASE_URL = (
+def normalizar_supabase_url(valor: str) -> str:
+    """Devuelve la URL raíz del proyecto, aunque Render incluya /rest/v1."""
+    valor = (valor or "").strip().rstrip("/")
+    if not valor:
+        return ""
+
+    partes = urlsplit(valor)
+    ruta = partes.path.rstrip("/")
+    sufijo_rest = "/rest/v1"
+    if ruta.endswith(sufijo_rest):
+        ruta = ruta[:-len(sufijo_rest)]
+
+    return urlunsplit(partes._replace(path=ruta)).rstrip("/")
+
+
+SUPABASE_URL = normalizar_supabase_url(
     os.environ.get("SUPABASE_URL") or ""
-).strip().rstrip("/")
+)
 
 SUPABASE_ANON_KEY = (
     os.environ.get("SUPABASE_ANON_KEY") or ""
@@ -56,8 +73,13 @@ app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_BYTES
 # Secciones fijas editoriales de la página
 SECCIONES_EDITORIALES: Set[str] = {
     "vida",
-    "obra",
-    "inicio"
+    "obra"
+}
+
+SECCIONES_PUBLICACIONES: Set[str] = {
+    "inicio",
+    "fotos",
+    "videos"
 }
 
 
@@ -659,6 +681,435 @@ def verificar_admin() -> Any:
 
 
 # ============================================================
+# PUBLICACIONES GENERALES Y GALERÍAS
+# ============================================================
+
+@app.route("/api/publicaciones", methods=["GET"])
+def obtener_publicaciones() -> Any:
+
+    if supabase is None:
+        return respuesta_error(
+            SUPABASE_CONFIG_ERROR or "Supabase no está configurado.",
+            503
+        )
+
+    seccion = request.args.get("seccion", "").strip().lower()
+    if seccion and seccion not in SECCIONES_PUBLICACIONES:
+        return respuesta_error("Sección de publicaciones no válida.", 400)
+
+    try:
+        consulta = (
+            supabase
+            .table("publicaciones")
+            .select("id,titulo,texto,mediaUrl,mediaType,mediaPath,seccion,fecha")
+            .order("fecha", desc=True)
+            .limit(100)
+        )
+        if seccion:
+            consulta = consulta.eq("seccion", seccion)
+
+        respuesta_query = consulta.execute()
+        filas = cast(List[Any], respuesta_query.data or [])
+        return jsonify({"success": True, "publicaciones": filas})
+
+    except Exception as error:
+        app.logger.exception("No se pudieron cargar las publicaciones.")
+        return respuesta_error(str(error), 500)
+
+
+@app.route("/api/publicaciones", methods=["POST"])
+@requiere_admin
+def crear_publicacion() -> Any:
+
+    if supabase_admin is None:
+        return respuesta_error("Supabase administrativo no está configurado.", 503)
+
+    seccion = request.form.get("seccion", "").strip().lower()
+    if seccion not in SECCIONES_PUBLICACIONES:
+        return respuesta_error("Sección de publicaciones no válida.", 400)
+
+    titulo = request.form.get("titulo", "").strip()
+    texto = request.form.get("texto", "").strip()
+    archivo = request.files.get("file")
+
+    if len(titulo) > 300 or len(texto) > 100000:
+        return respuesta_error("El título o el texto supera el límite permitido.", 400)
+    if not titulo and not texto and not (archivo and archivo.filename):
+        return respuesta_error("Indica un título, texto o archivo.", 400)
+    if seccion in {"fotos", "videos"} and not (archivo and archivo.filename):
+        return respuesta_error("Selecciona un archivo para la galería.", 400)
+
+    media_url: Optional[str] = None
+    media_type: Optional[str] = None
+    media_path: Optional[str] = None
+
+    if archivo and archivo.filename:
+        nombre_original = secure_filename(archivo.filename)
+        extension = Path(nombre_original).suffix.lower()
+        metadata = ALLOWED_MEDIA.get(extension)
+        if not metadata:
+            return respuesta_error("Formato de archivo no permitido.", 400)
+
+        content_type, tipo = metadata
+        if tipo not in {"image", "video"}:
+            return respuesta_error("Solo se permiten imágenes o videos en estas publicaciones.", 400)
+        if seccion == "fotos" and tipo != "image":
+            return respuesta_error("La sección Fotos solo admite imágenes.", 400)
+        if seccion == "videos" and tipo != "video":
+            return respuesta_error("La sección Videos solo admite videos.", 400)
+
+        media_path = f"publicaciones/{seccion}/{uuid.uuid4().hex}_{nombre_original}"
+        try:
+            contenido_archivo = archivo.read()
+            subir_archivo_supabase(
+                SUPABASE_STORAGE_BUCKET,
+                media_path,
+                contenido_archivo,
+                content_type
+            )
+            media_url = obtener_url_publica(
+                supabase_admin,
+                SUPABASE_STORAGE_BUCKET,
+                media_path
+            )
+            media_type = tipo
+        except Exception as error:
+            app.logger.exception("No se pudo subir el medio de la publicación.")
+            return respuesta_error(f"No se pudo subir el archivo: {error}", 500)
+
+    fila: Dict[str, Any] = {
+        "id": str(uuid.uuid4()),
+        "titulo": titulo,
+        "texto": texto,
+        "mediaUrl": media_url,
+        "mediaType": media_type,
+        "mediaPath": media_path,
+        "seccion": seccion,
+        "fecha": datetime.now(timezone.utc).isoformat()
+    }
+
+    try:
+        if SUPABASE_WRITE_KEY.startswith("sb_secret_"):
+            filas = solicitar_supabase_admin(
+                "POST",
+                "publicaciones",
+                json=fila,
+                prefer="return=representation"
+            )
+            publicacion = filas[0] if filas else fila
+        else:
+            respuesta_insert = (
+                supabase_admin
+                .table("publicaciones")
+                .insert(fila)
+                .execute()
+            )
+            filas = cast(List[Any], respuesta_insert.data or [])
+            publicacion = filas[0] if filas else fila
+
+        return jsonify({"success": True, "publicacion": publicacion})
+
+    except Exception as error:
+        app.logger.exception("No se pudo guardar la publicación.")
+        return respuesta_error(str(error), 500)
+
+
+@app.route("/api/publicaciones/<publicacion_id>", methods=["DELETE"])
+@requiere_admin
+def eliminar_publicacion(publicacion_id: str) -> Any:
+
+    if supabase_admin is None:
+        return respuesta_error("Supabase administrativo no está configurado.", 503)
+
+    try:
+        if SUPABASE_WRITE_KEY.startswith("sb_secret_"):
+            filas = solicitar_supabase_admin(
+                "DELETE",
+                "publicaciones",
+                params={"id": f"eq.{publicacion_id}"},
+                prefer="return=representation"
+            )
+        else:
+            respuesta_delete = (
+                supabase_admin
+                .table("publicaciones")
+                .delete()
+                .eq("id", publicacion_id)
+                .execute()
+            )
+            filas = cast(List[Any], respuesta_delete.data or [])
+
+        if not filas:
+            return respuesta_error("No se encontró la publicación.", 404)
+        return jsonify({"success": True})
+
+    except Exception as error:
+        app.logger.exception("No se pudo eliminar la publicación.")
+        return respuesta_error(str(error), 500)
+
+
+# ============================================================
+# COMENTARIOS DE PUBLICACIONES
+# ============================================================
+
+@app.route(
+    "/api/publicaciones/<publicacion_id>/comentarios",
+    methods=["GET"]
+)
+def obtener_comentarios(publicacion_id: str) -> Any:
+
+    if supabase is None:
+        return respuesta_error(SUPABASE_CONFIG_ERROR or "Supabase no está configurado.", 503)
+
+    try:
+        respuesta_query = (
+            supabase
+            .table("comentarios")
+            .select("id,publicacion_id,nombre,texto,created_at")
+            .eq("publicacion_id", publicacion_id)
+            .order("created_at", desc=False)
+            .limit(100)
+            .execute()
+        )
+        comentarios = cast(List[Any], respuesta_query.data or [])
+        return jsonify({"success": True, "comentarios": comentarios})
+
+    except Exception as error:
+        app.logger.exception("No se pudieron cargar los comentarios.")
+        return respuesta_error(str(error), 500)
+
+
+@app.route(
+    "/api/publicaciones/<publicacion_id>/comentarios",
+    methods=["POST"]
+)
+def crear_comentario(publicacion_id: str) -> Any:
+
+    if supabase is None or supabase_admin is None:
+        return respuesta_error("El servicio de comentarios no está configurado.", 503)
+
+    datos = request.get_json(silent=True) or {}
+    texto = datos.get("texto", "")
+    if not isinstance(texto, str):
+        return respuesta_error("El comentario debe ser texto.", 400)
+    texto = texto.strip()
+    if not texto or len(texto) > 1000:
+        return respuesta_error("Escribe un comentario de hasta 1000 caracteres.", 400)
+
+    try:
+        publicacion = (
+            supabase
+            .table("publicaciones")
+            .select("id")
+            .eq("id", publicacion_id)
+            .limit(1)
+            .execute()
+        )
+        if not (publicacion.data or []):
+            return respuesta_error("No se encontró la publicación.", 404)
+
+        fila = {
+            "publicacion_id": publicacion_id,
+            "nombre": "Visitante",
+            "texto": texto
+        }
+        if SUPABASE_WRITE_KEY.startswith("sb_secret_"):
+            filas = solicitar_supabase_admin(
+                "POST", "comentarios", json=fila, prefer="return=representation"
+            )
+            comentario = filas[0] if filas else fila
+        else:
+            respuesta_insert = supabase_admin.table("comentarios").insert(fila).execute()
+            filas = cast(List[Any], respuesta_insert.data or [])
+            comentario = filas[0] if filas else fila
+
+        return jsonify({"success": True, "comentario": comentario})
+
+    except Exception as error:
+        app.logger.exception("No se pudo guardar el comentario.")
+        return respuesta_error(str(error), 500)
+
+
+# ============================================================
+# SUSCRIPCIONES
+# ============================================================
+
+@app.route("/api/suscripciones/count", methods=["GET"])
+def contar_suscriptores() -> Any:
+
+    if supabase_admin is None:
+        return respuesta_error("El servicio de suscripciones no está configurado.", 503)
+
+    try:
+        respuesta_query = (
+            supabase_admin
+            .table("suscriptores")
+            .select("id", count="exact", head=True)
+            .execute()
+        )
+        return jsonify({"success": True, "count": int(respuesta_query.count or 0)})
+
+    except Exception as error:
+        app.logger.exception("No se pudo contar a los suscriptores.")
+        return respuesta_error(str(error), 500)
+
+
+@app.route("/api/suscripciones", methods=["POST"])
+def crear_suscripcion() -> Any:
+
+    if supabase_admin is None:
+        return respuesta_error("El servicio de suscripciones no está configurado.", 503)
+
+    datos = request.get_json(silent=True) or {}
+    email = datos.get("email", "")
+    if not isinstance(email, str):
+        return respuesta_error("El correo electrónico no es válido.", 400)
+    email = email.strip().lower()
+    if len(email) > 254 or not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", email):
+        return respuesta_error("El correo electrónico no es válido.", 400)
+
+    try:
+        if SUPABASE_WRITE_KEY.startswith("sb_secret_"):
+            filas = solicitar_supabase_admin(
+                "POST",
+                "suscriptores",
+                params={"on_conflict": "email"},
+                json={"email": email},
+                prefer="resolution=ignore-duplicates,return=representation"
+            )
+        else:
+            respuesta_insert = (
+                supabase_admin
+                .table("suscriptores")
+                .upsert({"email": email}, on_conflict="email", ignore_duplicates=True)
+                .execute()
+            )
+            filas = cast(List[Any], respuesta_insert.data or [])
+
+        return jsonify({"success": True, "alreadySubscribed": not bool(filas)})
+
+    except Exception as error:
+        app.logger.exception("No se pudo completar la suscripción.")
+        return respuesta_error(str(error), 500)
+
+
+# ============================================================
+# DATOS PÚBLICOS DE CONTACTO
+# ============================================================
+
+CONTACTO_VACIO = {
+    "whatsapp": "",
+    "email": "",
+    "messenger_url": "",
+    "tiktok_handle": ""
+}
+
+
+@app.route("/api/contacto-publico", methods=["GET"])
+def obtener_contacto_publico() -> Any:
+
+    if supabase is None:
+        return respuesta_error(SUPABASE_CONFIG_ERROR or "Supabase no está configurado.", 503)
+
+    try:
+        respuesta_query = (
+            supabase
+            .table("contacto_publico")
+            .select("whatsapp,email,messenger_url,tiktok_handle")
+            .eq("id", 1)
+            .limit(1)
+            .execute()
+        )
+        filas = cast(List[Any], respuesta_query.data or [])
+        contacto = dict(CONTACTO_VACIO)
+        if filas and isinstance(filas[0], dict):
+            contacto.update({campo: filas[0].get(campo) or "" for campo in CONTACTO_VACIO})
+        return jsonify({"success": True, "contacto": contacto})
+
+    except Exception as error:
+        app.logger.exception("No se pudieron cargar los canales de contacto.")
+        return respuesta_error(str(error), 500)
+
+
+@app.route("/api/contacto-publico", methods=["PUT"])
+@requiere_admin
+def actualizar_contacto_publico() -> Any:
+
+    if supabase_admin is None:
+        return respuesta_error("Supabase administrativo no está configurado.", 503)
+
+    datos = request.get_json(silent=True) or {}
+    contacto: Dict[str, str] = {}
+    for campo in CONTACTO_VACIO:
+        valor = datos.get(campo, "")
+        if not isinstance(valor, str):
+            return respuesta_error("Los campos de contacto deben ser texto.", 400)
+        contacto[campo] = valor.strip()
+
+    whatsapp = contacto["whatsapp"]
+    if whatsapp and (
+        not re.fullmatch(r"[+0-9().\-\s]{7,32}", whatsapp)
+        or len(re.sub(r"\D", "", whatsapp)) < 7
+    ):
+        return respuesta_error("El número de WhatsApp no es válido.", 400)
+
+    email = contacto["email"]
+    if email and (
+        len(email) > 254
+        or not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", email)
+    ):
+        return respuesta_error("El correo electrónico no es válido.", 400)
+
+    messenger = contacto["messenger_url"]
+    if messenger:
+        partes = urlsplit(messenger)
+        host = (partes.hostname or "").lower()
+        if (
+            partes.scheme != "https"
+            or not host
+            or not (host == "m.me" or host == "messenger.com" or host.endswith(".messenger.com") or host == "facebook.com" or host.endswith(".facebook.com"))
+            or len(messenger) > 2048
+        ):
+            return respuesta_error("El enlace de Messenger debe ser una URL HTTPS de Facebook/Messenger.", 400)
+
+    tiktok = contacto["tiktok_handle"]
+    if tiktok and not re.fullmatch(r"@?[A-Za-z0-9._]{2,24}", tiktok):
+        return respuesta_error("Indica el usuario de TikTok (por ejemplo, @usuario).", 400)
+
+    fila: Dict[str, Any] = {
+        "id": 1,
+        **contacto,
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+
+    try:
+        if SUPABASE_WRITE_KEY.startswith("sb_secret_"):
+            filas = solicitar_supabase_admin(
+                "POST",
+                "contacto_publico",
+                params={"on_conflict": "id"},
+                json=fila,
+                prefer="resolution=merge-duplicates,return=representation"
+            )
+            guardado = filas[0] if filas else fila
+        else:
+            respuesta_upsert = (
+                supabase_admin
+                .table("contacto_publico")
+                .upsert(fila, on_conflict="id")
+                .execute()
+            )
+            filas = cast(List[Any], respuesta_upsert.data or [])
+            guardado = filas[0] if filas else fila
+
+        return jsonify({"success": True, "contacto": guardado})
+
+    except Exception as error:
+        app.logger.exception("No se pudieron guardar los canales de contacto.")
+        return respuesta_error(str(error), 500)
+
+
+# ============================================================
 # SECCIONES EDITORIALES (VIDA / OBRA / INICIO) - TEXTO Y DOCUMENTOS
 # ============================================================
 
@@ -697,8 +1148,13 @@ def obtener_contenido_secciones() -> Any:
 
         filas = cast(List[Any], respuesta_query.data if respuesta_query and respuesta_query.data else [])
 
-        contenido: Dict[str, Dict[str, Any]] = {
-            seccion: {"contenido": "", "archivo_url": None}
+        contenido: Dict[str, str] = {
+            seccion: ""
+            for seccion
+            in SECCIONES_EDITORIALES
+        }
+        archivos: Dict[str, Optional[str]] = {
+            seccion: None
             for seccion
             in SECCIONES_EDITORIALES
         }
@@ -707,14 +1163,13 @@ def obtener_contenido_secciones() -> Any:
             if isinstance(fila, dict):
                 seccion_val = fila.get("seccion")
                 if seccion_val in SECCIONES_EDITORIALES:
-                    contenido[seccion_val] = {
-                        "contenido": fila.get("contenido") or "",
-                        "archivo_url": fila.get("archivo_url")
-                    }
+                    contenido[seccion_val] = fila.get("contenido") or ""
+                    archivos[seccion_val] = fila.get("archivo_url")
 
         return jsonify({
             "success": True,
-            "secciones": contenido
+            "secciones": contenido,
+            "archivos": archivos
         })
 
     except Exception as error:
@@ -752,7 +1207,11 @@ def actualizar_contenido_seccion(
             404
         )
 
-    contenido = request.form.get("contenido", "")
+    datos_json = request.get_json(silent=True) or {}
+    contenido = request.form.get(
+        "contenido",
+        datos_json.get("contenido", "")
+    )
 
     if not isinstance(
         contenido,

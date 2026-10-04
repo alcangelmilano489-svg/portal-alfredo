@@ -20,11 +20,29 @@ import servidor  # noqa: E402
 class FakeDatabase:
     def __init__(self):
         self.records = {}
+        self.publications = []
+        self.comments = []
+        self.subscribers = []
+        self.contact = {
+            "id": 1,
+            "whatsapp": "",
+            "email": "",
+            "messenger_url": "",
+            "tiktok_handle": "",
+        }
 
     def table(self, name):
-        if name != "contenido_secciones":
-            raise AssertionError("Unexpected table: " + name)
-        return FakeQuery(self)
+        if name == "contenido_secciones":
+            return FakeQuery(self)
+        if name == "publicaciones":
+            return FakePublicationQuery(self)
+        if name == "comentarios":
+            return FakeCommentQuery(self)
+        if name == "suscriptores":
+            return FakeSubscriberQuery(self)
+        if name == "contacto_publico":
+            return FakeContactQuery(self)
+        raise AssertionError("Unexpected table: " + name)
 
 
 class FakeQuery:
@@ -58,6 +76,146 @@ class FakeQuery:
         return SimpleNamespace(data=rows)
 
 
+class FakePublicationQuery:
+    def __init__(self, database):
+        self.database = database
+        self.filters = {}
+        self.insert_row = None
+        self.deleting = False
+
+    def select(self, _columns):
+        return self
+
+    def eq(self, column, value):
+        self.filters[column] = value
+        return self
+
+    def order(self, _column, desc=False):
+        return self
+
+    def limit(self, _count):
+        return self
+
+    def insert(self, row):
+        self.insert_row = dict(row)
+        return self
+
+    def delete(self):
+        self.deleting = True
+        return self
+
+    def execute(self):
+        if self.insert_row is not None:
+            self.database.publications.append(self.insert_row)
+            return SimpleNamespace(data=[self.insert_row])
+
+        if self.deleting:
+            deleted = [
+                row for row in self.database.publications
+                if all(row.get(key) == value for key, value in self.filters.items())
+            ]
+            self.database.publications = [
+                row for row in self.database.publications if row not in deleted
+            ]
+            return SimpleNamespace(data=deleted)
+
+        rows = list(self.database.publications)
+        for key, value in self.filters.items():
+            rows = [row for row in rows if row.get(key) == value]
+        return SimpleNamespace(data=rows)
+
+
+class FakeCommentQuery:
+    def __init__(self, database):
+        self.database = database
+        self.filters = {}
+        self.insert_row = None
+
+    def select(self, _columns):
+        return self
+
+    def eq(self, column, value):
+        self.filters[column] = value
+        return self
+
+    def order(self, _column, desc=False):
+        return self
+
+    def limit(self, _count):
+        return self
+
+    def insert(self, row):
+        self.insert_row = dict(row)
+        return self
+
+    def execute(self):
+        if self.insert_row is not None:
+            row = dict(self.insert_row)
+            row.update({"id": "comment-1", "created_at": "2026-10-04T00:00:00+00:00"})
+            self.database.comments.append(row)
+            return SimpleNamespace(data=[row])
+
+        rows = list(self.database.comments)
+        for key, value in self.filters.items():
+            rows = [row for row in rows if row.get(key) == value]
+        return SimpleNamespace(data=rows)
+
+
+class FakeSubscriberQuery:
+    def __init__(self, database):
+        self.database = database
+        self.insert_row = None
+
+    def select(self, _columns, count=None, head=False):
+        return self
+
+    def upsert(self, row, on_conflict=None, ignore_duplicates=False):
+        if on_conflict != "email" or not ignore_duplicates:
+            raise AssertionError("Unexpected subscriber upsert options")
+        self.insert_row = dict(row)
+        return self
+
+    def execute(self):
+        if self.insert_row is not None:
+            exists = any(row["email"] == self.insert_row["email"] for row in self.database.subscribers)
+            if exists:
+                return SimpleNamespace(data=[])
+            self.database.subscribers.append(self.insert_row)
+            return SimpleNamespace(data=[self.insert_row])
+        return SimpleNamespace(data=[], count=len(self.database.subscribers))
+
+
+class FakeContactQuery:
+    def __init__(self, database):
+        self.database = database
+        self.filters = {}
+        self.upsert_row = None
+
+    def select(self, _columns):
+        return self
+
+    def eq(self, column, value):
+        self.filters[column] = value
+        return self
+
+    def limit(self, _count):
+        return self
+
+    def upsert(self, row, on_conflict=None):
+        if on_conflict != "id":
+            raise AssertionError("Unexpected contact conflict target")
+        self.upsert_row = dict(row)
+        return self
+
+    def execute(self):
+        if self.upsert_row is not None:
+            self.database.contact = dict(self.upsert_row)
+            return SimpleNamespace(data=[self.database.contact])
+        if all(self.database.contact.get(key) == value for key, value in self.filters.items()):
+            return SimpleNamespace(data=[self.database.contact])
+        return SimpleNamespace(data=[])
+
+
 class EditorialSectionsApiTests(unittest.TestCase):
     def setUp(self):
         self.database = FakeDatabase()
@@ -73,7 +231,8 @@ class EditorialSectionsApiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.get_json(), {
             "success": True,
-            "secciones": {"vida": None, "obra": None},
+            "secciones": {"vida": "", "obra": ""},
+            "archivos": {"vida": None, "obra": None},
         })
 
     def test_public_read_returns_saved_text(self):
@@ -85,7 +244,20 @@ class EditorialSectionsApiTests(unittest.TestCase):
         response = self.client.get("/api/secciones")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.get_json()["secciones"]["vida"], "Biografía actualizada")
-        self.assertIsNone(response.get_json()["secciones"]["obra"])
+        self.assertEqual(response.get_json()["secciones"]["obra"], "")
+
+    def test_admin_can_save_multipart_content_for_vida(self):
+        response = self.client.put(
+            "/api/secciones/vida",
+            data={"contenido": "Título biográfico\n\nHistoria"},
+            headers={"X-Admin-Password": "test-admin-password"},
+        )
+        self.assertEqual(response.status_code, 200)
+        public_response = self.client.get("/api/secciones")
+        self.assertEqual(
+            public_response.get_json()["secciones"]["vida"],
+            "Título biográfico\n\nHistoria",
+        )
 
     def test_write_requires_admin_password(self):
         response = self.client.put("/api/secciones/vida", json={"contenido": "No autorizado"})
@@ -119,6 +291,131 @@ class EditorialSectionsApiTests(unittest.TestCase):
         self.assertEqual(unknown.status_code, 404)
         self.assertEqual(invalid.status_code, 400)
         self.assertEqual(self.database.records, {})
+
+    def test_publications_api_lists_by_section(self):
+        self.database.publications = [
+            {"id": "1", "titulo": "Inicio", "seccion": "inicio"},
+            {"id": "2", "titulo": "Foto", "seccion": "fotos"},
+        ]
+        response = self.client.get("/api/publicaciones?seccion=inicio")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            [item["id"] for item in response.get_json()["publicaciones"]],
+            ["1"],
+        )
+
+    def test_publication_creation_requires_admin(self):
+        response = self.client.post(
+            "/api/publicaciones",
+            data={"seccion": "inicio", "titulo": "No autorizado"},
+        )
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(self.database.publications, [])
+
+    def test_admin_can_create_and_delete_publication(self):
+        headers = {"X-Admin-Password": "test-admin-password"}
+        created = self.client.post(
+            "/api/publicaciones",
+            data={"seccion": "inicio", "titulo": "Aviso", "texto": "Contenido"},
+            headers=headers,
+        )
+        self.assertEqual(created.status_code, 200)
+        self.assertTrue(created.get_json()["success"])
+        publication_id = created.get_json()["publicacion"]["id"]
+
+        deleted = self.client.delete(
+            "/api/publicaciones/" + publication_id,
+            headers=headers,
+        )
+        self.assertEqual(deleted.status_code, 200)
+        self.assertEqual(self.database.publications, [])
+
+    def test_public_comments_can_be_created_and_listed(self):
+        self.database.publications = [{"id": "post-1"}]
+        created = self.client.post(
+            "/api/publicaciones/post-1/comentarios",
+            json={"texto": "Muy buen artículo."},
+        )
+        self.assertEqual(created.status_code, 200)
+        self.assertTrue(created.get_json()["success"])
+
+        listed = self.client.get("/api/publicaciones/post-1/comentarios")
+        self.assertEqual(listed.status_code, 200)
+        self.assertEqual(len(listed.get_json()["comentarios"]), 1)
+        self.assertEqual(listed.get_json()["comentarios"][0]["texto"], "Muy buen artículo.")
+
+    def test_subscription_signup_is_idempotent_and_counted(self):
+        first = self.client.post("/api/suscripciones", json={"email": "lector@example.com"})
+        second = self.client.post("/api/suscripciones", json={"email": "LECTOR@example.com"})
+        count = self.client.get("/api/suscripciones/count")
+
+        self.assertEqual(first.status_code, 200)
+        self.assertFalse(first.get_json()["alreadySubscribed"])
+        self.assertTrue(second.get_json()["alreadySubscribed"])
+        self.assertEqual(count.status_code, 200)
+        self.assertEqual(count.get_json()["count"], 1)
+
+    def test_subscription_rejects_invalid_email(self):
+        response = self.client.post("/api/suscripciones", json={"email": "not-an-email"})
+        self.assertEqual(response.status_code, 400)
+
+    def test_public_contact_channels_can_be_read_and_updated_by_admin(self):
+        headers = {"X-Admin-Password": "test-admin-password"}
+        channels = {
+            "whatsapp": "+58 412-1234567",
+            "email": "contacto@example.com",
+            "messenger_url": "https://m.me/portal",
+            "tiktok_handle": "@portal.maneiro",
+        }
+        updated = self.client.put("/api/contacto-publico", json=channels, headers=headers)
+        self.assertEqual(updated.status_code, 200)
+        self.assertEqual(updated.get_json()["contacto"]["tiktok_handle"], "@portal.maneiro")
+
+        public = self.client.get("/api/contacto-publico")
+        self.assertEqual(public.status_code, 200)
+        self.assertEqual(public.get_json()["contacto"]["email"], "contacto@example.com")
+
+    def test_contact_write_requires_admin_and_rejects_untrusted_url(self):
+        unauthenticated = self.client.put(
+            "/api/contacto-publico", json={"email": "contacto@example.com"}
+        )
+        invalid = self.client.put(
+            "/api/contacto-publico",
+            json={"messenger_url": "javascript:alert(1)"},
+            headers={"X-Admin-Password": "test-admin-password"},
+        )
+        self.assertEqual(unauthenticated.status_code, 401)
+        self.assertEqual(invalid.status_code, 400)
+
+    def test_public_contact_view_replaces_the_static_form(self):
+        html = (ROOT / "index.html").read_text(encoding="utf-8")
+        admin_html = (ROOT / "admin.html").read_text(encoding="utf-8")
+        self.assertIn('id="contacto-canales"', html)
+        self.assertNotIn('id="form-contacto"', html)
+        self.assertIn("/api/contacto-publico", html)
+        for field in ("whatsapp", "email", "messenger", "tiktok"):
+            self.assertIn("admin-contacto-" + field, admin_html)
+
+    def test_contact_migration_removes_public_write_policy(self):
+        migration = (ROOT / "migrations/20261004_contacto_publico_api.sql").read_text(encoding="utf-8")
+        self.assertIn('drop policy if exists "Permitir actualizacion administrativa de contacto"', migration)
+        self.assertIn("revoke all on table public.contacto_publico from anon, authenticated", migration)
+        self.assertIn("grant select on table public.contacto_publico to anon, authenticated", migration)
+        self.assertIn("grant all on table public.contacto_publico to service_role", migration)
+
+
+class SupabaseUrlNormalizationTests(unittest.TestCase):
+    def test_strips_postgrest_suffix(self):
+        self.assertEqual(
+            servidor.normalizar_supabase_url("https://example.supabase.co/rest/v1/"),
+            "https://example.supabase.co",
+        )
+
+    def test_preserves_project_root(self):
+        self.assertEqual(
+            servidor.normalizar_supabase_url("https://example.supabase.co/"),
+            "https://example.supabase.co",
+        )
 
 
 if __name__ == "__main__":
