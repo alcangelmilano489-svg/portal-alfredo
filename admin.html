@@ -56,7 +56,31 @@
                 <button class="btn-actualizar" onclick="publicarInicio(event)">Publicar en Inicio</button>
             </div>
 
-            <!-- 2. SECCIÓN FOTOS -->
+            <!-- 2. SECCIÓN VIDA -->
+            <div class="admin-card">
+                <h2>📖 Sección Vida</h2>
+                <label for="admin-titulo-vida">Título / Subtítulo:</label>
+                <input type="text" id="admin-titulo-vida" placeholder="Título de la etapa o biografía...">
+                <label for="admin-texto-vida">Contenido biográfico:</label>
+                <textarea id="admin-texto-vida" placeholder="Escribe la historia o detalles de su vida..."></textarea>
+                <label for="admin-archivo-vida">Adjuntar Imagen ilustrativa opcional:</label>
+                <input type="file" id="admin-archivo-vida" accept="image/*">
+                <button class="btn-actualizar" onclick="publicarSeccionEspecifica('vida', event)">Publicar en Vida</button>
+            </div>
+
+            <!-- 3. SECCIÓN OBRA -->
+            <div class="admin-card">
+                <h2>📚 Sección Obra</h2>
+                <label for="admin-titulo-obra">Título de la obra:</label>
+                <input type="text" id="admin-titulo-obra" placeholder="Título de la obra...">
+                <label for="admin-texto-obra">Descripción / Contenido:</label>
+                <textarea id="admin-texto-obra" placeholder="Escribe la descripción de la obra..."></textarea>
+                <label for="admin-archivo-obra">Adjuntar Archivo o Imagen opcional:</label>
+                <input type="file" id="admin-archivo-obra" accept="image/*,.pdf">
+                <button class="btn-actualizar" onclick="publicarSeccionEspecifica('obra', event)">Publicar en Obra</button>
+            </div>
+
+            <!-- 4. SECCIÓN FOTOS -->
             <div class="admin-card">
                 <h2>📷 Sección Fotos (Galería)</h2>
                 <input type="file" id="admin-foto-archivo" accept="image/*">
@@ -64,7 +88,7 @@
                 <button class="btn-actualizar" onclick="subirMultimedia('fotos', 'admin-foto-archivo', 'admin-foto-nombre', 'image', event)">Subir Foto a la Galería</button>
             </div>
 
-            <!-- 3. SECCIÓN VIDEOS -->
+            <!-- 5. SECCIÓN VIDEOS -->
             <div class="admin-card">
                 <h2>🎥 Sección Videos</h2>
                 <input type="file" id="admin-video-archivo" accept="video/*">
@@ -161,6 +185,58 @@
 
                 alert("¡Publicación guardada con éxito!");
                 await actualizarListaInicio();
+
+            } catch (error) {
+                alert("Error: " + error.message);
+            } finally {
+                btn.textContent = original;
+                btn.disabled = false;
+            }
+        }
+
+        async function publicarSeccionEspecifica(nombreSeccion, eventRef) {
+            let tituloId = 'admin-titulo-' + nombreSeccion;
+            let textoId = 'admin-texto-' + nombreSeccion;
+            let archivoId = 'admin-archivo-' + nombreSeccion;
+
+            let titulo = document.getElementById(tituloId).value.trim();
+            let texto = document.getElementById(textoId).value.trim();
+            let inputArchivo = document.getElementById(archivoId);
+
+            if (!titulo && !texto && (!inputArchivo.files || !inputArchivo.files[0])) {
+                alert("Debes rellenar al menos un título, texto o adjuntar un archivo para la sección " + nombreSeccion + ".");
+                return;
+            }
+
+            const btn = eventRef.target;
+            let original = btn.textContent;
+            btn.textContent = "Procesando...";
+            btn.disabled = true;
+
+            try {
+                const formData = new FormData();
+                formData.append('titulo', titulo);
+                formData.append('texto', texto);
+                formData.append('seccion', nombreSeccion); // Envía 'vida' u 'obra'
+                if (inputArchivo.files && inputArchivo.files[0]) {
+                    formData.append('file', inputArchivo.files[0]);
+                }
+
+                const response = await fetch('/api/publicaciones', {
+                    method: 'POST',
+                    headers: { 'X-Admin-Password': adminPassword },
+                    body: formData
+                });
+                const result = await response.json();
+                if (!response.ok || !result.success) {
+                    throw new Error(result.error || 'No se pudo guardar la publicación.');
+                }
+
+                document.getElementById(tituloId).value = "";
+                document.getElementById(textoId).value = "";
+                inputArchivo.value = "";
+
+                alert("¡Publicación guardada con éxito en " + nombreSeccion.toUpperCase() + "!");
 
             } catch (error) {
                 alert("Error: " + error.message);
