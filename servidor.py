@@ -53,6 +53,7 @@ MAX_UPLOAD_BYTES = 100 * 1024 * 1024
 
 app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_BYTES
 
+# Secciones fijas editoriales de la página
 SECCIONES_EDITORIALES: Set[str] = {
     "vida",
     "obra"
@@ -82,17 +83,20 @@ PUBLIC_ASSETS = {
 # ============================================================
 
 ALLOWED_MEDIA = {
+    # Imágenes
     ".gif": ("image/gif", "image"),
     ".jpeg": ("image/jpeg", "image"),
     ".jpg": ("image/jpeg", "image"),
     ".png": ("image/png", "image"),
     ".webp": ("image/webp", "image"),
 
+    # Videos
     ".m4v": ("video/x-m4v", "video"),
     ".mov": ("video/quicktime", "video"),
     ".mp4": ("video/mp4", "video"),
     ".webm": ("video/webm", "video"),
 
+    # Documentos (para la sección de obras: PDF, Word)
     ".pdf": ("application/pdf", "document"),
     ".doc": ("application/msword", "document"),
     ".docx": ("application/vnd.openxmlformats-officedocument.wordprocessingml.document", "document"),
@@ -715,8 +719,7 @@ def obtener_contenido_secciones() -> Any:
     except Exception as error:
 
         app.logger.exception(
-            "No se pudo cargar "
-            "el contenido editorial."
+            "No se pudo cargar el contenido editorial."
         )
 
         return respuesta_error(
@@ -882,6 +885,7 @@ def actualizar_contenido_seccion(
 
         return jsonify({
             "success": True,
+            "message": "Publicación hecha exitosamente en la base de datos",
             "seccion": seccion,
             "contenido": guardada.get(
                 "contenido",
@@ -900,10 +904,4 @@ def actualizar_contenido_seccion(
             "No se pudo guardar el contenido editorial."
         )
 
-        msg_error = str(error)
-        return respuesta_error(msg_error, 500)
-
-
-# ============================================================
-# PUBLICACIONES (INICIO / PORTAL, FOTOS, VIDEOS)
-# ========
+        return
