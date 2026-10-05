@@ -82,6 +82,11 @@ class FakePublicationQuery:
         self.filters = {}
         self.insert_row = None
         self.deleting = False
+        self.range_bounds = None
+
+    def range(self, start, end):
+        self.range_bounds = (start, end)
+        return self
 
     def select(self, _columns):
         return self
@@ -122,6 +127,9 @@ class FakePublicationQuery:
         rows = list(self.database.publications)
         for key, value in self.filters.items():
             rows = [row for row in rows if row.get(key) == value]
+        if self.range_bounds is not None:
+            start, end = self.range_bounds
+            rows = rows[start:end + 1]
         return SimpleNamespace(data=rows)
 
 
@@ -387,6 +395,33 @@ class EditorialSectionsApiTests(unittest.TestCase):
         self.assertEqual(unauthenticated.status_code, 401)
         self.assertEqual(invalid.status_code, 400)
 
+    def test_contact_delete_requires_admin_and_clears_all_channels(self):
+        self.database.contact.update({
+            "whatsapp": "+58 412-1234567",
+            "email": "contacto@example.com",
+            "messenger_url": "https://m.me/portal",
+            "tiktok_handle": "@portal.maneiro",
+        })
+
+        unauthenticated = self.client.delete("/api/contacto-publico")
+        self.assertEqual(unauthenticated.status_code, 401)
+        self.assertEqual(self.database.contact["email"], "contacto@example.com")
+
+        deleted = self.client.delete(
+            "/api/contacto-publico",
+            headers={"X-Admin-Password": "test-admin-password"},
+        )
+        self.assertEqual(deleted.status_code, 200)
+        self.assertTrue(deleted.get_json()["success"])
+        self.assertEqual(
+            {field: self.database.contact[field] for field in servidor.CONTACTO_VACIO},
+            servidor.CONTACTO_VACIO,
+        )
+
+        public = self.client.get("/api/contacto-publico")
+        self.assertEqual(public.status_code, 200)
+        self.assertEqual(public.get_json()["contacto"], servidor.CONTACTO_VACIO)
+
     def test_public_contact_view_replaces_the_static_form(self):
         html = (ROOT / "index.html").read_text(encoding="utf-8")
         admin_html = (ROOT / "admin.html").read_text(encoding="utf-8")
@@ -395,6 +430,8 @@ class EditorialSectionsApiTests(unittest.TestCase):
         self.assertIn("/api/contacto-publico", html)
         for field in ("whatsapp", "email", "messenger", "tiktok"):
             self.assertIn("admin-contacto-" + field, admin_html)
+        self.assertIn('id="btn-eliminar-contacto"', admin_html)
+        self.assertIn("eliminarContactoAdmin(event)", admin_html)
 
     def test_contact_migration_removes_public_write_policy(self):
         migration = (ROOT / "migrations/20261004_contacto_publico_api.sql").read_text(encoding="utf-8")
