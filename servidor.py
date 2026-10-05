@@ -1246,6 +1246,46 @@ def actualizar_contacto_publico() -> Any:
         return respuesta_error(str(error), 500)
 
 
+@app.route("/api/contacto-publico", methods=["DELETE"])
+@requiere_admin
+def eliminar_contacto_publico() -> Any:
+
+    if supabase_admin is None:
+        return respuesta_error("Supabase administrativo no está configurado.", 503)
+
+    fila: Dict[str, Any] = {
+        "id": 1,
+        **CONTACTO_VACIO,
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+
+    try:
+        if SUPABASE_WRITE_KEY.startswith("sb_secret_"):
+            filas = solicitar_supabase_admin(
+                "POST",
+                "contacto_publico",
+                params={"on_conflict": "id"},
+                json=fila,
+                prefer="resolution=merge-duplicates,return=representation"
+            )
+            guardado = filas[0] if filas else fila
+        else:
+            respuesta_upsert = (
+                supabase_admin
+                .table("contacto_publico")
+                .upsert(fila, on_conflict="id")
+                .execute()
+            )
+            filas = cast(List[Any], respuesta_upsert.data or [])
+            guardado = filas[0] if filas else fila
+
+        return jsonify({"success": True, "contacto": guardado})
+
+    except Exception as error:
+        app.logger.exception("No se pudieron eliminar los canales de contacto.")
+        return respuesta_error(str(error), 500)
+
+
 # ============================================================
 # SECCIONES EDITORIALES (VIDA / OBRA / INICIO) - TEXTO Y DOCUMENTOS
 # ============================================================

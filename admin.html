@@ -133,6 +133,10 @@
                 <label for="admin-contacto-tiktok">Usuario de TikTok:</label>
                 <input type="text" id="admin-contacto-tiktok" maxlength="24" placeholder="@usuario">
                 <button class="btn-actualizar" onclick="guardarContactoAdmin(event)">Guardar datos de contacto</button>
+                <div class="admin-acciones-eliminar">
+                    <button class="btn-eliminar" id="btn-eliminar-contacto" type="button" onclick="eliminarContactoAdmin(event)" aria-describedby="aviso-eliminar-contacto">Eliminar todos los canales de contacto</button>
+                </div>
+                <p id="aviso-eliminar-contacto" style="color:#64748b; font-size:13px;">Vacía WhatsApp, correo, Messenger y TikTok; dejarán de mostrarse a los visitantes.</p>
                 <p id="estado-contacto-admin" aria-live="polite" style="color:#475569; font-size:14px;"></p>
             </div>
 
@@ -548,6 +552,41 @@
                 estado.textContent = 'Información de contacto actualizada correctamente.';
             } catch (error) {
                 estado.textContent = error.message || 'No se pudieron guardar los datos de contacto.';
+            } finally {
+                boton.disabled = false;
+                boton.textContent = original;
+            }
+        }
+
+        async function eliminarContactoAdmin(eventRef) {
+            const boton = eventRef.currentTarget || eventRef.target;
+            const original = boton.textContent;
+            const estado = document.getElementById('estado-contacto-admin');
+            const confirmar = window.confirm(
+                '¿Eliminar todos los canales de contacto? WhatsApp, correo, Messenger y TikTok se vaciarán de la base de datos y dejarán de mostrarse a los visitantes. También se borrarán los valores escritos en el formulario.'
+            );
+            if (!confirmar) return;
+
+            boton.disabled = true;
+            boton.textContent = 'Eliminando...';
+            estado.textContent = '';
+            try {
+                const response = await fetch('/api/contacto-publico', {
+                    method: 'DELETE',
+                    headers: { 'X-Admin-Password': adminPassword }
+                });
+                const result = await leerJsonRespuesta(response);
+                if (!response.ok || !result.success) {
+                    throw new Error(result.error || 'No se pudieron eliminar los datos de contacto.');
+                }
+
+                document.getElementById('admin-contacto-whatsapp').value = '';
+                document.getElementById('admin-contacto-email').value = '';
+                document.getElementById('admin-contacto-messenger').value = '';
+                document.getElementById('admin-contacto-tiktok').value = '';
+                estado.textContent = 'Se eliminaron todos los canales de contacto.';
+            } catch (error) {
+                estado.textContent = error.message || 'No se pudieron eliminar los datos de contacto.';
             } finally {
                 boton.disabled = false;
                 boton.textContent = original;
