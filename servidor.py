@@ -192,7 +192,10 @@ def robots_txt():
         "Disallow: /api/\n"
         "Sitemap: https://alfredomaneiro.org.ve/sitemap.xml\n"
     )
-    return contenido, 200, {"Content-Type": "text/plain; charset=utf-8"}
+    return contenido, 200, {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Cache-Control": "public, max-age=0, must-revalidate",
+    }
 
 
 @app.route("/admin")
