@@ -356,6 +356,10 @@ class EditorialSectionsApiTests(unittest.TestCase):
         public_html = (ROOT / "index.html").read_text(encoding="utf-8")
         self.assertIn('<p class="header-lema">El sueño del hombre</p>', public_html)
         self.assertIn(".header-institucional .header-lema", (ROOT / "style.css").read_text(encoding="utf-8"))
+        self.assertIn("<title>Alfredo Maneiro</title>", public_html)
+        self.assertNotIn("portal", public_html.lower())
+        admin_html = (ROOT / "admin.html").read_text(encoding="utf-8")
+        self.assertIn('<meta name="robots" content="noindex, nofollow">', admin_html)
 
     def test_rejects_unknown_section_and_non_text_content(self):
         headers = {"X-Admin-Password": "test-admin-password"}
