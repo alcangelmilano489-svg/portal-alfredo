@@ -62,6 +62,15 @@ body {
     text-transform: uppercase;
 }
 
+.header-institucional .header-lema {
+    margin-top: 10px;
+    color: #ffffff;
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    line-height: 1.2;
+}
+
 /* ==========================================================
    MENÚ DE NAVEGACIÓN POR PESTAÑAS
    ========================================================== */
@@ -716,6 +725,10 @@ body {
 
     .header-institucional p {
         font-size: 14px;
+    }
+
+    .header-institucional .header-lema {
+        font-size: 20px;
     }
 
     .menu-navegacion a {
