@@ -596,6 +596,29 @@ def inicio() -> Any:
     )
 
 
+@app.route("/robots.txt")
+def robots_txt() -> Response:
+    contenido = (
+        "User-agent: *\n"
+        "Allow: /\n"
+        "Disallow: /admin\n"
+        "Disallow: /api/\n"
+        "Sitemap: https://alfredomaneiro.org.ve/sitemap.xml\n"
+    )
+    return Response(contenido, mimetype="text/plain")
+
+
+@app.route("/sitemap.xml")
+def sitemap_xml() -> Response:
+    contenido = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+        "<url><loc>https://alfredomaneiro.org.ve/</loc></url>"
+        "</urlset>\n"
+    )
+    return Response(contenido, mimetype="application/xml")
+
+
 # ============================================================
 # ADMIN
 # ============================================================

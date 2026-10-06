@@ -356,10 +356,24 @@ class EditorialSectionsApiTests(unittest.TestCase):
         public_html = (ROOT / "index.html").read_text(encoding="utf-8")
         self.assertIn('<p class="header-lema">El sueño del hombre</p>', public_html)
         self.assertIn(".header-institucional .header-lema", (ROOT / "style.css").read_text(encoding="utf-8"))
-        self.assertIn("<title>Alfredo Maneiro</title>", public_html)
+        self.assertIn("<title>Alfredo Maneiro | Pensamiento y Legado</title>", public_html)
+        self.assertIn('"@type": "WebSite"', public_html)
+        self.assertIn('property="og:site_name" content="Alfredo Maneiro | Pensamiento y Legado"', public_html)
         self.assertNotIn("portal", public_html.lower())
         admin_html = (ROOT / "admin.html").read_text(encoding="utf-8")
         self.assertIn('<meta name="robots" content="noindex, nofollow">', admin_html)
+
+    def test_search_engines_can_fetch_robots_and_sitemap(self):
+        robots = self.client.get("/robots.txt")
+        sitemap = self.client.get("/sitemap.xml")
+
+        self.assertEqual(robots.status_code, 200)
+        self.assertIn("text/plain", robots.content_type)
+        self.assertIn("Disallow: /api/", robots.get_data(as_text=True))
+        self.assertIn("Sitemap: https://alfredomaneiro.org.ve/sitemap.xml", robots.get_data(as_text=True))
+        self.assertEqual(sitemap.status_code, 200)
+        self.assertIn("application/xml", sitemap.content_type)
+        self.assertIn("<loc>https://alfredomaneiro.org.ve/</loc>", sitemap.get_data(as_text=True))
 
     def test_rejects_unknown_section_and_non_text_content(self):
         headers = {"X-Admin-Password": "test-admin-password"}
