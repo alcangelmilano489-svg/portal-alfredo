@@ -1636,7 +1636,12 @@ def eliminar_contenido_seccion(seccion: str) -> Any:
             filas_seccion = cast(List[Any], respuesta_seccion.data or [])
 
         if not filas_seccion or not isinstance(filas_seccion[0], dict):
-            return respuesta_error("No hay contenido guardado para eliminar.", 404)
+            return jsonify({
+                "success": True,
+                "seccion": seccion,
+                "archivo_eliminado": False,
+                "already_empty": True
+            })
 
         fila_seccion = cast(Dict[str, Any], filas_seccion[0])
         archivo_url = fila_seccion.get("archivo_url")
@@ -1676,12 +1681,18 @@ def eliminar_contenido_seccion(seccion: str) -> Any:
             filas_eliminadas = cast(List[Any], respuesta_delete.data or [])
 
         if not filas_eliminadas:
-            return respuesta_error("No hay contenido guardado para eliminar.", 404)
+            return jsonify({
+                "success": True,
+                "seccion": seccion,
+                "archivo_eliminado": False,
+                "already_empty": True
+            })
 
         return jsonify({
             "success": True,
             "seccion": seccion,
-            "archivo_eliminado": bool(archivo_path)
+            "archivo_eliminado": bool(archivo_path),
+            "already_empty": False
         })
 
     except Exception as error:

@@ -49,7 +49,9 @@ class FakeQuery:
     def __init__(self, database):
         self.database = database
         self.allowed_sections = None
+        self.filters = {}
         self.upsert_row = None
+        self.deleting = False
 
     def select(self, _columns):
         return self
@@ -58,10 +60,21 @@ class FakeQuery:
         self.allowed_sections = set(values)
         return self
 
+    def eq(self, column, value):
+        self.filters[column] = value
+        return self
+
+    def limit(self, _count):
+        return self
+
     def upsert(self, row, on_conflict=None):
         if on_conflict != "seccion":
             raise AssertionError("Unexpected conflict target")
         self.upsert_row = row
+        return self
+
+    def delete(self):
+        self.deleting = True
         return self
 
     def execute(self):
@@ -70,9 +83,20 @@ class FakeQuery:
             self.database.records[row["seccion"]] = row
             return SimpleNamespace(data=[row])
 
+        if self.deleting:
+            deleted = [
+                row for row in self.database.records.values()
+                if all(row.get(key) == value for key, value in self.filters.items())
+            ]
+            for row in deleted:
+                self.database.records.pop(row["seccion"], None)
+            return SimpleNamespace(data=deleted)
+
         rows = list(self.database.records.values())
         if self.allowed_sections is not None:
             rows = [row for row in rows if row["seccion"] in self.allowed_sections]
+        for key, value in self.filters.items():
+            rows = [row for row in rows if row.get(key) == value]
         return SimpleNamespace(data=rows)
 
 
@@ -287,6 +311,46 @@ class EditorialSectionsApiTests(unittest.TestCase):
             public_response.get_json()["secciones"]["obra"],
             "Pensamiento y legado\nSegundo párrafo.",
         )
+
+    def test_admin_can_delete_saved_editorial_section(self):
+        self.database.records["obra"] = {
+            "seccion": "obra",
+            "contenido": "Texto con un error que se va a corregir.",
+            "archivo_url": None,
+        }
+
+        response = self.client.delete(
+            "/api/secciones/obra",
+            headers={"X-Admin-Password": "test-admin-password"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.get_json()["success"])
+        self.assertFalse(response.get_json()["already_empty"])
+        self.assertNotIn("obra", self.database.records)
+
+    def test_admin_can_clear_draft_when_editorial_section_is_already_empty(self):
+        response = self.client.delete(
+            "/api/secciones/obra",
+            headers={"X-Admin-Password": "test-admin-password"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json(), {
+            "success": True,
+            "seccion": "obra",
+            "archivo_eliminado": False,
+            "already_empty": True,
+        })
+
+    def test_editorial_delete_requires_admin_password(self):
+        response = self.client.delete("/api/secciones/obra")
+        self.assertEqual(response.status_code, 401)
+
+    def test_empty_editorial_section_delete_button_can_be_used_for_drafts(self):
+        admin_html = (ROOT / "admin.html").read_text(encoding="utf-8")
+        self.assertIn("if (button) button.disabled = false;", admin_html)
+        self.assertIn("limpiar el borrador", admin_html)
 
     def test_rejects_unknown_section_and_non_text_content(self):
         headers = {"X-Admin-Password": "test-admin-password"}

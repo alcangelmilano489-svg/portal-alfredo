@@ -445,10 +445,11 @@
                     const button = document.getElementById('btn-eliminar-seccion-' + seccion);
                     const estado = document.getElementById('estado-seccion-' + seccion);
                     const hayContenido = Boolean(String(contenidos[seccion] || '').trim() || archivos[seccion]);
-                    if (button) button.disabled = !hayContenido;
+                    // El botón también permite limpiar un borrador aún no publicado.
+                    if (button) button.disabled = false;
                     if (estado) estado.textContent = hayContenido
                         ? 'Hay contenido guardado; al eliminarlo se borrarán también sus archivos asociados.'
-                        : 'No hay contenido guardado para eliminar.';
+                        : 'No hay contenido publicado. Puedes usar Eliminar para limpiar el borrador.';
                 });
             } catch (error) {
                 ['vida', 'obra'].forEach(function(seccion) {
@@ -463,7 +464,7 @@
         async function eliminarSeccionEditorial(seccion) {
             const nombre = seccion === 'vida' ? 'Vida' : 'Obra';
             if (!['vida', 'obra'].includes(seccion)) return;
-            if (!confirm('¿Eliminar todo el texto y el archivo guardado en la sección ' + nombre + '? Esta acción no se puede deshacer.')) return;
+            if (!confirm('¿Eliminar todo el contenido guardado y limpiar el borrador de la sección ' + nombre + '? Esta acción no se puede deshacer.')) return;
 
             const button = document.getElementById('btn-eliminar-seccion-' + seccion);
             if (button) button.disabled = true;
@@ -474,7 +475,12 @@
                 });
                 const result = await leerJsonRespuesta(response);
                 if (!response.ok || !result.success) throw new Error(result.error || 'No se pudo eliminar el contenido.');
-                alert('Contenido de ' + nombre + ' eliminado.');
+                document.getElementById('admin-titulo-' + seccion).value = '';
+                document.getElementById('admin-texto-' + seccion).value = '';
+                document.getElementById('admin-archivo-' + seccion).value = '';
+                alert(result.already_empty
+                    ? 'No había contenido publicado en ' + nombre + '; se limpió el borrador.'
+                    : 'Contenido de ' + nombre + ' eliminado.');
                 await actualizarEstadoSeccionesEditoriales();
             } catch (error) {
                 alert('Error al eliminar: ' + (error.message || 'No se pudo eliminar el contenido.'));
