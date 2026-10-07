@@ -183,18 +183,6 @@ def inicio():
     return send_from_directory(app.root_path, "index.html")
 
 
-@app.route("/robots.txt")
-def robots_txt():
-    contenido = (
-        "User-agent: *\n"
-        "Allow: /\n"
-        "Disallow: /admin\n"
-        "Disallow: /api/\n"
-        "Sitemap: https://alfredomaneiro.org.ve/sitemap.xml\n"
-    )
-    return contenido, 200, {"Content-Type": "text/plain; charset=utf-8"}
-
-
 @app.route("/admin")
 @app.route("/admin.html")
 def panel_admin():
