@@ -605,7 +605,9 @@ def robots_txt() -> Response:
         "Disallow: /api/\n"
         "Sitemap: https://alfredomaneiro.org.ve/sitemap.xml\n"
     )
-    return Response(contenido, mimetype="text/plain")
+    respuesta = Response(contenido, mimetype="text/plain")
+    respuesta.headers["Cache-Control"] = "public, max-age=0, must-revalidate"
+    return respuesta
 
 
 @app.route("/sitemap.xml")

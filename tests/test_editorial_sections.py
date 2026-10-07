@@ -372,7 +372,14 @@ class EditorialSectionsApiTests(unittest.TestCase):
 
         self.assertEqual(robots.status_code, 200)
         self.assertIn("text/plain", robots.content_type)
-        self.assertIn("Disallow: /api/", robots.get_data(as_text=True))
+        reglas_robots = robots.get_data(as_text=True).splitlines()
+        self.assertIn("Allow: /", reglas_robots)
+        self.assertNotIn("Disallow: /", reglas_robots)
+        self.assertIn("Disallow: /api/", reglas_robots)
+        self.assertEqual(
+            robots.headers.get("Cache-Control"),
+            "public, max-age=0, must-revalidate",
+        )
         self.assertIn("Sitemap: https://alfredomaneiro.org.ve/sitemap.xml", robots.get_data(as_text=True))
         self.assertEqual(sitemap.status_code, 200)
         self.assertIn("application/xml", sitemap.content_type)
