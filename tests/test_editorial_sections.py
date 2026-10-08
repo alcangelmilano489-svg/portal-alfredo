@@ -485,6 +485,63 @@ class EditorialSectionsApiTests(unittest.TestCase):
             "Nueva publicación",
         )
 
+    def test_admin_can_delete_legacy_flat_media_in_photos_and_videos(self):
+        headers = {"X-Admin-Password": "test-admin-password"}
+        casos = (
+            ("fotos", "legacy-photo", "publicaciones/legacy-photo.jpg"),
+            ("videos", "legacy-video", "publicaciones/legacy-video.mp4"),
+        )
+
+        for seccion, publication_id, media_path in casos:
+            with self.subTest(seccion=seccion):
+                self.database.publications = [{
+                    "id": publication_id,
+                    "seccion": seccion,
+                    "titulo": "Archivo de prueba",
+                    "mediaPath": media_path,
+                }]
+                storage_response = SimpleNamespace(
+                    status_code=200,
+                    is_success=True,
+                )
+
+                with patch.object(
+                    servidor.httpx,
+                    "request",
+                    return_value=storage_response,
+                ) as storage_request:
+                    deleted = self.client.delete(
+                        f"/api/publicaciones/{publication_id}?seccion={seccion}",
+                        headers=headers,
+                    )
+
+                self.assertEqual(deleted.status_code, 200, deleted.get_json())
+                self.assertTrue(deleted.get_json()["success"])
+                self.assertEqual(self.database.publications, [])
+                self.assertEqual(
+                    storage_request.call_args.kwargs["json"],
+                    {"prefixes": [media_path]},
+                )
+
+    def test_admin_delete_rejects_nested_media_path_from_another_section(self):
+        headers = {"X-Admin-Password": "test-admin-password"}
+        self.database.publications = [{
+            "id": "wrong-section-media",
+            "seccion": "fotos",
+            "titulo": "No debe tocarse",
+            "mediaPath": "publicaciones/videos/otro.mp4",
+        }]
+
+        with patch.object(servidor.httpx, "request") as storage_request:
+            deleted = self.client.delete(
+                "/api/publicaciones/wrong-section-media?seccion=fotos",
+                headers=headers,
+            )
+
+        self.assertEqual(deleted.status_code, 409)
+        self.assertEqual(len(self.database.publications), 1)
+        storage_request.assert_not_called()
+
     def test_public_comments_can_be_created_and_listed(self):
         self.database.publications = [{"id": "post-1"}]
         created = self.client.post(

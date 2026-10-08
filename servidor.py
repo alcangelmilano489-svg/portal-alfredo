@@ -965,8 +965,28 @@ def eliminar_publicacion(publicacion_id: str) -> Any:
 
         media_eliminado: Optional[bool] = None
         if media_path:
-            prefijo_esperado = f"publicaciones/{seccion_esperada}/"
-            if not media_path.startswith(prefijo_esperado):
+            partes_media = media_path.split("/")
+            partes_validas = (
+                all(
+                    parte and parte not in {".", ".."}
+                    for parte in partes_media
+                )
+                and "\\" not in media_path
+            )
+            ruta_actual = (
+                len(partes_media) == 3
+                and partes_media[0] == "publicaciones"
+                and partes_media[1] == seccion_esperada
+            )
+            # Before per-section folders were introduced, uploaded media was
+            # stored directly under publicaciones/. The row's section and ID
+            # were already verified above, so allow only a single filename
+            # component for this legacy layout.
+            ruta_heredada = (
+                len(partes_media) == 2
+                and partes_media[0] == "publicaciones"
+            )
+            if not partes_validas or not (ruta_actual or ruta_heredada):
                 return respuesta_error(
                     "El archivo no pertenece a la sección de esta publicación; no se eliminó nada.",
                     409
