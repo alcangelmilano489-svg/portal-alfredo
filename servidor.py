@@ -391,7 +391,8 @@ def eliminar_archivo_supabase(
     )
     headers = encabezados_supabase_admin()
     headers["Content-Type"] = "application/json"
-    response = httpx.delete(
+    response = httpx.request(
+        "DELETE",
         url,
         headers=headers,
         json={"prefixes": [path]},

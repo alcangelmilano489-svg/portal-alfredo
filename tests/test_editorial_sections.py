@@ -3,6 +3,7 @@ import sys
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -434,6 +435,55 @@ class EditorialSectionsApiTests(unittest.TestCase):
         )
         self.assertEqual(deleted.status_code, 200)
         self.assertEqual(self.database.publications, [])
+
+    def test_admin_can_delete_publication_with_media(self):
+        headers = {"X-Admin-Password": "test-admin-password"}
+        publication = {
+            "id": "post-with-media",
+            "seccion": "inicio",
+            "titulo": "Publicación de prueba",
+            "mediaPath": "publicaciones/inicio/prueba.jpg",
+        }
+        self.database.publications = [publication]
+        storage_response = SimpleNamespace(status_code=200, is_success=True)
+
+        with patch.object(
+            servidor.httpx,
+            "request",
+            return_value=storage_response,
+        ) as storage_request:
+            deleted = self.client.delete(
+                "/api/publicaciones/post-with-media?seccion=inicio",
+                headers=headers,
+            )
+
+        self.assertEqual(deleted.status_code, 200, deleted.get_json())
+        self.assertTrue(deleted.get_json()["success"])
+        self.assertEqual(self.database.publications, [])
+        storage_request.assert_called_once()
+        metodo, url = storage_request.call_args.args
+        self.assertEqual(metodo, "DELETE")
+        self.assertIn("/storage/v1/object/media", url)
+        self.assertEqual(
+            storage_request.call_args.kwargs["json"],
+            {"prefixes": ["publicaciones/inicio/prueba.jpg"]},
+        )
+
+        created = self.client.post(
+            "/api/publicaciones",
+            data={
+                "seccion": "inicio",
+                "titulo": "Nueva publicación",
+                "texto": "Lista para publicarse.",
+            },
+            headers=headers,
+        )
+        self.assertEqual(created.status_code, 200, created.get_json())
+        self.assertEqual(len(self.database.publications), 1)
+        self.assertEqual(
+            self.database.publications[0]["titulo"],
+            "Nueva publicación",
+        )
 
     def test_public_comments_can_be_created_and_listed(self):
         self.database.publications = [{"id": "post-1"}]
